@@ -1,35 +1,58 @@
 <!DOCTYPE html>
 <html lang="ja">
-  <head>
+<head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>RegiMaster Pro</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
-      body {
-        font-family: 'Inter', 'Noto Sans JP', sans-serif;
-        background-color: #f3f4f6;
-      }
+        body {
+            font-family: 'Inter', 'Noto Sans JP', sans-serif;
+            background-color: #f3f4f6;
+        }
+        /* Hide scrollbar for badge list */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
     </style>
+    
+    <!-- Import Map for React & Lucide -->
     <script type="importmap">
-{
-  "imports": {
-    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.555.0",
-    "react-dom/client": "https://aistudiocdn.com/react-dom@^19.2.1/client",
-    "react": "https://aistudiocdn.com/react@^19.2.1"
-  }
-}
-</script>
+    {
+      "imports": {
+        "react": "https://esm.sh/react@18.2.0",
+        "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+        "lucide-react": "https://esm.sh/lucide-react@0.330.0"
+      }
+    }
+    </script>
+
+    <!-- Babel for in-browser JSX/TS transpilation -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 </head>
-  <body>
+<body>
     <div id="root"></div>
-    <script type="module">
+
+    <script type="text/babel" data-type="module" data-presets="typescript,react">
         import React, { useState, useEffect, useMemo, useRef } from 'react';
         import ReactDOM from 'react-dom/client';
-        import { Printer, RefreshCw, Settings, Clock, AlertCircle, ArrowLeftRight, UserCheck, UserX, ChevronDown, ChevronUp, History, XCircle, Ban, Users, Monitor, CalendarRange, Save, Database, Plus, Trash2, Edit2, GripVertical, Check, Badge, FileText, Upload } from 'lucide-react';
+        import { 
+            Printer, RefreshCw, Settings, Clock, AlertCircle, ArrowLeftRight, 
+            UserCheck, UserX, ChevronDown, ChevronUp, History, XCircle, Ban, 
+            Users, Monitor, CalendarRange, Save, Database, Plus, Trash2, 
+            Edit2, GripVertical, Check, Badge, FileText, Upload 
+        } from 'lucide-react';
 
-        // --- constants.ts ---
+        // ==========================================
+        // Constants
+        // ==========================================
         const DEFAULT_OPEN_TIME = "09:00";
         const DEFAULT_CLOSE_TIME = "21:00";
         const TIME_SLOT_MINUTES = 60;
@@ -38,7 +61,9 @@
         const PRIORITY_MIN = 0;
         const LOCAL_STORAGE_KEY = 'regi_master_pro_v2';
 
-        // --- types.ts ---
+        // ==========================================
+        // Types & Definitions
+        // ==========================================
         const DAYS_OF_WEEK = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday', 'Holiday'];
         const DAY_LABELS = {
             Monday: '月',
@@ -51,7 +76,9 @@
             Holiday: '祝',
         };
 
-        // --- services/logic.ts ---
+        // ==========================================
+        // Logic Services
+        // ==========================================
         const generateTimeSlots = (startStr, endStr) => {
             const slots = [];
             let current = parseTime(startStr);
@@ -85,7 +112,7 @@
             const y = date.getFullYear();
             const m = date.getMonth() + 1;
             const d = date.getDate();
-            const w = date.getDay(); // 0=Sun
+            const w = date.getDay(); 
 
             if (m === 1 && d === 1) return '元日';
             if (m === 2 && d === 11) return '建国記念の日';
@@ -127,9 +154,13 @@
         const generateShift = (date, allStaff, registers, settings) => {
             const dayOfWeekName = getDayOfWeek(date);
             const isTodayHoliday = isHoliday(date);
+            
             const timeSlots = generateTimeSlots(settings.openTime, settings.closeTime);
             const cells = {};
-            const activeRegisters = registers.filter(r => r.isActive).sort((a, b) => a.order - b.order);
+            
+            const activeRegisters = registers
+                .filter(r => r.isActive)
+                .sort((a, b) => a.order - b.order);
 
             const availableStaffForDay = allStaff.filter(s => {
                 if (isTodayHoliday && s.daysOff.includes('Holiday')) return false;
@@ -139,6 +170,7 @@
 
             timeSlots.forEach((slotTime, timeIndex) => {
                 const slotMinutes = parseTime(slotTime);
+
                 const staffAvailableAtSlot = availableStaffForDay.filter(staff => {
                     let config = staff.baseShift;
                     if (isTodayHoliday && staff.irregularShifts['Holiday']) {
@@ -146,19 +178,28 @@
                     } else if (staff.irregularShifts[dayOfWeekName]) {
                         config = staff.irregularShifts[dayOfWeekName];
                     }
+                    
                     const startMin = parseTime(config.start);
                     const endMin = parseTime(config.end);
+                    
                     if (slotMinutes < startMin || slotMinutes >= endMin) return false;
+
                     if (config.breakStart && config.breakEnd) {
                         const breakStartMin = parseTime(config.breakStart);
                         const breakEndMin = parseTime(config.breakEnd);
-                        if (slotMinutes >= breakStartMin && slotMinutes < breakEndMin) return false;
+                        if (slotMinutes >= breakStartMin && slotMinutes < breakEndMin) {
+                            return false;
+                        }
                     }
+
                     if (config.exclusionStart && config.exclusionEnd) {
                         const exStartMin = parseTime(config.exclusionStart);
                         const exEndMin = parseTime(config.exclusionEnd);
-                        if (slotMinutes >= exStartMin && slotMinutes < exEndMin) return false;
+                        if (slotMinutes >= exStartMin && slotMinutes < exEndMin) {
+                            return false;
+                        }
                     }
+
                     return true;
                 });
 
@@ -166,17 +207,23 @@
 
                 activeRegisters.forEach((reg) => {
                     let currentPool = [...availablePool];
+                    
                     if (reg.isBadgeRole) {
                         currentPool = currentPool.filter(s => s.badges && s.badges.includes(reg.name));
                     }
 
                     if (currentPool.length === 0) {
-                        cells[`${slotTime}-${reg.id}`] = { registerId: reg.id, staffId: null, isManualOverride: false };
+                        cells[`${slotTime}-${reg.id}`] = {
+                            registerId: reg.id,
+                            staffId: null,
+                            isManualOverride: false
+                        };
                         return;
                     }
 
                     const maxPriority = Math.max(...currentPool.map(s => s.priority));
                     const candidates = currentPool.filter(s => s.priority === maxPriority);
+
                     let selectedStaff = null;
 
                     if (candidates.length === 1) {
@@ -186,17 +233,26 @@
                             const prevTime = timeSlots[timeIndex - 1];
                             const prevCellKey = `${prevTime}-${reg.id}`;
                             const prevStaffId = cells[prevCellKey]?.staffId;
+
                             if (prevStaffId) {
                                 const incumbent = candidates.find(s => s.id === prevStaffId);
-                                if (incumbent) selectedStaff = incumbent;
+                                if (incumbent) {
+                                    selectedStaff = incumbent;
+                                }
                             }
                         }
+
                         if (!selectedStaff) {
                             selectedStaff = candidates[Math.floor(Math.random() * candidates.length)];
                         }
                     }
 
-                    cells[`${slotTime}-${reg.id}`] = { registerId: reg.id, staffId: selectedStaff.id, isManualOverride: false };
+                    cells[`${slotTime}-${reg.id}`] = {
+                        registerId: reg.id,
+                        staffId: selectedStaff.id,
+                        isManualOverride: false
+                    };
+
                     availablePool = availablePool.filter(s => s.id !== selectedStaff.id);
                 });
             });
@@ -210,7 +266,9 @@
             };
         };
 
-        // --- components/StaffView.tsx ---
+        // ==========================================
+        // Component: StaffView
+        // ==========================================
         const EMPTY_TIME = { start: '09:00', end: '18:00', breakStart: '', breakEnd: '', exclusionStart: '', exclusionEnd: '' };
 
         const StaffView = ({ staffList, setStaffList, availableBadges = [] }) => {
@@ -222,7 +280,9 @@
 
             const displayList = useMemo(() => {
                 if (frozenOrder) {
-                    return frozenOrder.map(id => staffList.find(s => s.id === id)).filter(s => !!s);
+                    return frozenOrder
+                        .map(id => staffList.find(s => s.id === id))
+                        .filter(s => !!s);
                 } else {
                     return [...staffList].sort((a, b) => b.priority - a.priority);
                 }
@@ -304,10 +364,11 @@
             };
 
             const getDayShortLabel = (day) => DAY_LABELS[day];
-
+            
             const handleExportCSV = () => {
                 const exportList = [...staffList].sort((a, b) => b.priority - a.priority);
                 const daysOrder = DAYS_OF_WEEK;
+                
                 let header = ['氏名', '分類', '優先度', 'バッジ(スキル)', '公休', '基本_開始', '基本_終了', '基本_外出', '基本_戻り'];
                 daysOrder.forEach(d => {
                     const l = getDayShortLabel(d);
@@ -318,10 +379,19 @@
                     const daysOffStr = s.daysOff.map(d => DAY_LABELS[d]).join('');
                     const typeStr = s.type === 'SPECIALIST' ? 'レジ専任' : '部門担当';
                     const badgesStr = (s.badges || []).join('|');
+                    
                     const row = [
-                        s.name, typeStr, s.priority.toString(), badgesStr, daysOffStr,
-                        s.baseShift.start, s.baseShift.end, s.baseShift.breakStart, s.baseShift.breakEnd
+                        s.name,
+                        typeStr,
+                        s.priority.toString(),
+                        badgesStr,
+                        daysOffStr,
+                        s.baseShift.start,
+                        s.baseShift.end,
+                        s.baseShift.breakStart,
+                        s.baseShift.breakEnd
                     ];
+
                     daysOrder.forEach(d => {
                         const irr = s.irregularShifts[d];
                         if (irr) {
@@ -330,15 +400,16 @@
                             row.push('', '', '', '', '', '');
                         }
                     });
+
                     return row;
                 });
-
+                
                 const csvContent = [header.join(','), ...rows.map(r => r.map(c => `"${c}"`).join(','))].join('\n');
                 const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: 'text/csv;charset=utf-8;' });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = `regimaster_staff_${new Date().toISOString().slice(0, 10)}.csv`;
+                a.download = `regimaster_staff_${new Date().toISOString().slice(0,10)}.csv`;
                 a.click();
             };
 
@@ -376,48 +447,58 @@
             const handleImportCSV = (e) => {
                 const file = e.target.files?.[0];
                 if (!file) return;
+
                 const reader = new FileReader();
                 reader.onload = (event) => {
                     try {
                         const text = event.target?.result;
                         const lines = text.split(/\r\n|\n/).filter(line => line.trim() !== '');
                         const newStaffList = [];
+                        
                         for (let i = 1; i < lines.length; i++) {
                             const cols = parseCSVRow(lines[i]);
                             if (cols.length < 9) continue;
+
                             const name = cols[0];
                             const typeStr = cols[1];
                             const type = typeStr === '部門担当' ? 'DEPARTMENT' : 'SPECIALIST';
                             const priority = Number(cols[2]) || 50;
                             const badgesStr = cols[3];
                             const badges = badgesStr ? badgesStr.split('|').filter(b => b.trim() !== '') : [];
+                            
                             const daysOffRaw = cols[4];
                             const daysOff = [];
                             Object.entries(DAY_LABELS).forEach(([key, label]) => {
                                 if (daysOffRaw.includes(label)) daysOff.push(key);
                             });
+
                             const baseShift = {
                                 start: cols[5] || '09:00', end: cols[6] || '18:00',
                                 breakStart: cols[7] || '', breakEnd: cols[8] || '',
                                 exclusionStart: '', exclusionEnd: ''
                             };
+
                             const irregularShifts = {};
                             let colIdx = 9;
                             DAYS_OF_WEEK.forEach(d => {
                                 const s = cols[colIdx++]; const e = cols[colIdx++];
                                 const bs = cols[colIdx++]; const be = cols[colIdx++];
                                 const exS = cols[colIdx++]; const exE = cols[colIdx++];
-                                if (s && e) irregularShifts[d] = { start: s, end: e, breakStart: bs || '', breakEnd: be || '', exclusionStart: exS || '', exclusionEnd: exE || '' };
+                                if (s && e) irregularShifts[d] = { start: s, end: e, breakStart: bs||'', breakEnd: be||'', exclusionStart: exS||'', exclusionEnd: exE||'' };
                             });
+
                             newStaffList.push({ id: crypto.randomUUID(), name, type, priority, daysOff, baseShift, irregularShifts, badges });
                         }
+                        
                         const uniqueNewStaff = newStaffList.filter(newS => !staffList.some(existS => isSameStaff(existS, newS)));
+                        
                         if (uniqueNewStaff.length > 0) {
                             setStaffList([...staffList, ...uniqueNewStaff]);
                             alert(`${uniqueNewStaff.length}件のスタッフを追加しました。`);
                         } else {
                             alert('新しいスタッフは追加されませんでした（すべて重複または空）。');
                         }
+
                     } catch (err) {
                         console.error(err);
                         alert('CSVの読み込み中にエラーが発生しました。');
@@ -434,12 +515,14 @@
                             <h3 className="text-xl font-bold text-gray-800">スタッフ編集</h3>
                             <button onClick={() => setIsEditing(null)} className="text-gray-500 hover:text-gray-700"><X size={24} /></button>
                         </div>
+
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-4">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">氏名</label>
                                     <input type="text" className="w-full border rounded p-2 focus:ring-2 focus:ring-blue-500 outline-none" value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} />
                                 </div>
+                                
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">分類</label>
@@ -452,10 +535,11 @@
                                         <label className="block text-sm font-medium text-gray-700 mb-1">優先度 (0-100)</label>
                                         <div className="flex items-center gap-2">
                                             <input type="number" min={PRIORITY_MIN} max={PRIORITY_MAX} className="w-20 border rounded p-2 text-center" value={editForm.priority} onChange={e => setEditForm({ ...editForm, priority: Number(e.target.value) })} />
-                                            <input type="range" min={PRIORITY_MIN} max={PRIORITY_MAX} value={editForm.priority} onChange={e => setEditForm({ ...editForm, priority: Number(e.target.value) })} className="flex-1 cursor-pointer" />
+                                            <input type="range" min={PRIORITY_MIN} max={PRIORITY_MAX} value={editForm.priority} onChange={e => setEditForm({...editForm, priority: Number(e.target.value)})} className="flex-1 cursor-pointer" />
                                         </div>
                                     </div>
                                 </div>
+
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">バッジ (スキル・役割)</label>
                                     <p className="text-xs text-gray-500 mb-2">レジ設定で「バッジ(役割)」をONにすると、ここに選択肢として表示されます。</p>
@@ -471,6 +555,7 @@
                                         })}
                                     </div>
                                 </div>
+
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">公休曜日</label>
                                     <div className="flex flex-wrap gap-2">
@@ -482,20 +567,15 @@
                                     </div>
                                 </div>
                             </div>
+
                             <div className="space-y-4 border-l pl-0 md:pl-6">
                                 <h4 className="font-semibold text-gray-700 border-b pb-2">シフト時間設定</h4>
                                 <div className="bg-blue-50 p-3 rounded-md">
                                     <span className="text-xs font-bold text-blue-800 block mb-2">基本シフト</span>
                                     <div className="flex gap-2 items-end mb-2">
-                                        <div className="flex-1">
-                                            <label className="text-xs text-gray-500">出勤</label>
-                                            <input type="time" className="w-full border rounded p-1 bg-white" value={editForm.baseShift.start} onChange={e => setEditForm({ ...editForm, baseShift: { ...editForm.baseShift, start: e.target.value } })} />
-                                        </div>
+                                        <div className="flex-1"><label className="text-xs text-gray-500">出勤</label><input type="time" className="w-full border rounded p-1 bg-white" value={editForm.baseShift.start} onChange={e => setEditForm({...editForm, baseShift: {...editForm.baseShift, start: e.target.value}})} /></div>
                                         <span className="pb-1">~</span>
-                                        <div className="flex-1">
-                                            <label className="text-xs text-gray-500">退勤</label>
-                                            <input type="time" className="w-full border rounded p-1 bg-white" value={editForm.baseShift.end} onChange={e => setEditForm({ ...editForm, baseShift: { ...editForm.baseShift, end: e.target.value } })} />
-                                        </div>
+                                        <div className="flex-1"><label className="text-xs text-gray-500">退勤</label><input type="time" className="w-full border rounded p-1 bg-white" value={editForm.baseShift.end} onChange={e => setEditForm({...editForm, baseShift: {...editForm.baseShift, end: e.target.value}})} /></div>
                                     </div>
                                 </div>
                                 <div className="mt-4">
@@ -509,26 +589,17 @@
                                                     <div className="flex justify-between items-center mb-1">
                                                         <span className="font-bold text-gray-700">{dayLabel}</span>
                                                         {irregular ? (
-                                                            <button onClick={() => { const newIrreg = { ...editForm.irregularShifts }; delete newIrreg[day]; setEditForm({ ...editForm, irregularShifts: newIrreg }); }} className="text-red-500 hover:text-red-700 text-xs flex items-center gap-1"><Trash2 size={12} /> 解除</button>
+                                                            <button onClick={() => { const newIrreg = {...editForm.irregularShifts}; delete newIrreg[day]; setEditForm({...editForm, irregularShifts: newIrreg}); }} className="text-red-500 hover:text-red-700 text-xs flex items-center gap-1"><Trash2 size={12}/> 解除</button>
                                                         ) : (
-                                                            <button onClick={() => setEditForm({ ...editForm, irregularShifts: { ...editForm.irregularShifts, [day]: { ...editForm.baseShift } } })} className="text-blue-600 hover:underline text-xs">+ 個別設定</button>
+                                                            <button onClick={() => setEditForm({...editForm, irregularShifts: {...editForm.irregularShifts, [day]: {...editForm.baseShift}}})} className="text-blue-600 hover:underline text-xs">+ 個別設定</button>
                                                         )}
                                                     </div>
                                                     {irregular && (
                                                         <>
                                                             <div className="grid grid-cols-2 gap-2 mb-2">
-                                                                <div className="flex gap-1 items-center">
-                                                                    <input type="time" className="w-full border rounded px-1 text-xs bg-white" value={irregular.start} onChange={e => setEditForm({ ...editForm, irregularShifts: { ...editForm.irregularShifts, [day]: { ...irregular, start: e.target.value } } })} />
-                                                                    <span>-</span>
-                                                                    <input type="time" className="w-full border rounded px-1 text-xs bg-white" value={irregular.end} onChange={e => setEditForm({ ...editForm, irregularShifts: { ...editForm.irregularShifts, [day]: { ...irregular, end: e.target.value } } })} />
-                                                                </div>
+                                                                <div className="flex gap-1 items-center"><input type="time" className="w-full border rounded px-1 text-xs bg-white" value={irregular.start} onChange={e => setEditForm({...editForm, irregularShifts: {...editForm.irregularShifts, [day]: {...irregular, start: e.target.value}}})} /><span>-</span><input type="time" className="w-full border rounded px-1 text-xs bg-white" value={irregular.end} onChange={e => setEditForm({...editForm, irregularShifts: {...editForm.irregularShifts, [day]: {...irregular, end: e.target.value}}})} /></div>
                                                             </div>
-                                                            <div className="flex gap-1 items-center bg-gray-100 p-1 rounded">
-                                                                <span className="text-xs text-gray-500 whitespace-nowrap">除外</span>
-                                                                <input type="time" className="w-full border rounded px-1 text-xs bg-white" value={irregular.exclusionStart || ''} onChange={e => setEditForm({ ...editForm, irregularShifts: { ...editForm.irregularShifts, [day]: { ...irregular, exclusionStart: e.target.value } } })} />
-                                                                <span>-</span>
-                                                                <input type="time" className="w-full border rounded px-1 text-xs bg-white" value={irregular.exclusionEnd || ''} onChange={e => setEditForm({ ...editForm, irregularShifts: { ...editForm.irregularShifts, [day]: { ...irregular, exclusionEnd: e.target.value } } })} />
-                                                            </div>
+                                                            <div className="flex gap-1 items-center bg-gray-100 p-1 rounded"><span className="text-xs text-gray-500 whitespace-nowrap">除外</span><input type="time" className="w-full border rounded px-1 text-xs bg-white" value={irregular.exclusionStart || ''} onChange={e => setEditForm({...editForm, irregularShifts: {...editForm.irregularShifts, [day]: {...irregular, exclusionStart: e.target.value}}})} /><span>-</span><input type="time" className="w-full border rounded px-1 text-xs bg-white" value={irregular.exclusionEnd || ''} onChange={e => setEditForm({...editForm, irregularShifts: {...editForm.irregularShifts, [day]: {...irregular, exclusionEnd: e.target.value}}})} /></div>
                                                         </>
                                                     )}
                                                 </div>
@@ -538,6 +609,7 @@
                                 </div>
                             </div>
                         </div>
+
                         <div className="mt-6 flex justify-end gap-3 pt-4 border-t">
                             <button onClick={() => setIsEditing(null)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded">キャンセル</button>
                             <button onClick={saveEdit} className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-2"><Save size={18} /> 保存</button>
@@ -587,8 +659,8 @@
                                             </div>
                                         </td>
                                         <td className="p-3">
-                                            <div className="flex gap-1 overflow-x-auto max-w-[300px] items-center" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-                                                {staff.badges && staff.badges.length > 0 ? staff.badges.map((b, i) => (<span key={i} className="text-[10px] bg-indigo-100 text-indigo-800 px-1.5 py-0.5 rounded border border-indigo-200 whitespace-nowrap">{b}</span>)) : <span className="text-gray-300 text-xs">-</span>}
+                                            <div className="flex gap-1 overflow-x-auto max-w-[300px] items-center no-scrollbar">
+                                                {staff.badges && staff.badges.length > 0 ? staff.badges.map((b,i) => (<span key={i} className="text-[10px] bg-indigo-100 text-indigo-800 px-1.5 py-0.5 rounded border border-indigo-200 whitespace-nowrap">{b}</span>)) : <span className="text-gray-300 text-xs">-</span>}
                                             </div>
                                         </td>
                                         <td className="p-3 text-gray-600">{staff.baseShift.start} - {staff.baseShift.end}</td>
@@ -608,11 +680,13 @@
             );
         };
 
-        // --- components/RegisterView.tsx ---
+        // ==========================================
+        // Component: RegisterView
+        // ==========================================
         const RegisterView = ({ registers, setRegisters }) => {
             const [editingId, setEditingId] = useState(null);
             const [tempName, setTempName] = useState("");
-
+            
             const toggleActive = (id, e) => {
                 if (editingId === id) return;
                 const target = e.target;
@@ -663,12 +737,19 @@
                 e.preventDefault();
                 const sourceIndexStr = e.dataTransfer.getData('text/plain');
                 if (!sourceIndexStr) return;
+                
                 const sourceIndex = parseInt(sourceIndexStr, 10);
                 if (sourceIndex === targetIndex) return;
+
                 const newSorted = [...sortedRegisters];
                 const [movedItem] = newSorted.splice(sourceIndex, 1);
                 newSorted.splice(targetIndex, 0, movedItem);
-                const updatedRegisters = newSorted.map((reg, index) => ({ ...reg, order: index + 1 }));
+
+                const updatedRegisters = newSorted.map((reg, index) => ({
+                    ...reg,
+                    order: index + 1
+                }));
+                
                 setRegisters(updatedRegisters);
             };
 
@@ -684,27 +765,45 @@
                         <div>
                             <h3 className="font-bold text-lg text-gray-800">レジ管理</h3>
                             <p className="text-sm text-gray-500">
-                                右上のハンドル<GripVertical className="inline w-3 h-3 mx-1" />で並び替え、
-                                名前をクリックまたは<Edit2 className="inline w-3 h-3 mx-1" />で名称変更できます。<br />
+                                右上のハンドル<GripVertical className="inline w-3 h-3 mx-1"/>で並び替え、
+                                名前をクリックまたは<Edit2 className="inline w-3 h-3 mx-1"/>で名称変更できます。<br/>
                                 「バッジ(役割)」をONにすると、そのレジ名がスキル条件となり、名簿でそのバッジを持つスタッフのみが割り当てられます。
                             </p>
                         </div>
-                        <button onClick={addRegister} className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 shadow-sm"><Plus size={16} /> レジ追加</button>
+                        <button onClick={addRegister} className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 shadow-sm">
+                            <Plus size={16} /> レジ追加
+                        </button>
                     </div>
+
                     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
                         {sortedRegisters.map((reg, index) => (
-                            <div key={reg.id} onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, index)} className={`relative p-4 rounded-lg border-2 transition-all duration-200 group pb-14 ${reg.isActive ? 'border-blue-500 bg-blue-50 shadow-md' : 'border-gray-200 bg-gray-50 opacity-60 hover:opacity-100'}`} onClick={(e) => toggleActive(reg.id, e)}>
+                            <div 
+                                key={reg.id} 
+                                onDragOver={handleDragOver}
+                                onDrop={(e) => handleDrop(e, index)}
+                                className={`relative p-4 rounded-lg border-2 transition-all duration-200 group pb-14 ${reg.isActive ? 'border-blue-500 bg-blue-50 shadow-md' : 'border-gray-200 bg-gray-50 opacity-60 hover:opacity-100'}`}
+                                onClick={(e) => toggleActive(reg.id, e)}
+                            >
                                 <div className="flex justify-between items-start mb-2">
                                     <Monitor className={reg.isActive ? 'text-blue-600' : 'text-gray-400'} size={24} />
                                     <div className="flex items-center gap-1">
                                         <span className="text-xs font-bold bg-white px-2 py-0.5 rounded border text-gray-600">No.{reg.order}</span>
-                                        <div className="cursor-grab text-gray-400 hover:text-gray-600 p-1 hover:bg-gray-200 rounded" draggable={true} onDragStart={(e) => handleDragStart(e, index)} onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}><GripVertical size={16} /></div>
+                                        <div 
+                                            className="cursor-grab text-gray-400 hover:text-gray-600 p-1 hover:bg-gray-200 rounded"
+                                            draggable={true}
+                                            onDragStart={(e) => handleDragStart(e, index)}
+                                            onClick={(e) => e.stopPropagation()}
+                                            onMouseDown={(e) => e.stopPropagation()}
+                                        >
+                                            <GripVertical size={16} />
+                                        </div>
                                     </div>
                                 </div>
+                                
                                 <div className="text-center mt-1 mb-1 min-h-[30px] flex items-center justify-center">
                                     {editingId === reg.id ? (
                                         <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
-                                            <input type="text" value={tempName} onChange={e => setTempName(e.target.value)} onBlur={() => saveEdit(reg.id)} onKeyDown={e => { if (e.key === 'Enter') saveEdit(reg.id) }} autoFocus className="w-full text-center border-2 border-blue-400 rounded px-1 py-0.5 text-sm font-bold text-gray-800 focus:outline-none" />
+                                            <input type="text" value={tempName} onChange={e => setTempName(e.target.value)} onBlur={() => saveEdit(reg.id)} onKeyDown={e => { if(e.key === 'Enter') saveEdit(reg.id) }} autoFocus className="w-full text-center border-2 border-blue-400 rounded px-1 py-0.5 text-sm font-bold text-gray-800 focus:outline-none" />
                                             <button onMouseDown={(e) => { e.preventDefault(); saveEdit(reg.id); }} className="bg-green-500 text-white p-1 rounded hover:bg-green-600"><Check size={14} /></button>
                                         </div>
                                     ) : (
@@ -714,11 +813,33 @@
                                         </div>
                                     )}
                                 </div>
+
                                 <div className="mt-2 text-center" onClick={(e) => e.stopPropagation()}>
-                                    <button onClick={(e) => { e.stopPropagation(); toggleBadgeRole(reg.id); }} className={`flex items-center justify-center gap-1 w-full py-1 px-2 rounded-full text-[10px] font-bold transition-colors border ${reg.isBadgeRole ? 'bg-indigo-600 text-white border-indigo-600 hover:bg-indigo-700' : 'bg-white text-gray-400 border-gray-300 hover:border-gray-400 hover:text-gray-600'}`} title="ONにすると、このレジ名がスキル条件(バッジ)となり、名簿でそのバッジを持つスタッフのみ割り当てられます。"><Badge size={10} />{reg.isBadgeRole ? 'バッジ(役割) ON' : 'バッジ(役割) OFF'}</button>
+                                    <button 
+                                        onClick={(e) => { e.stopPropagation(); toggleBadgeRole(reg.id); }}
+                                        className={`flex items-center justify-center gap-1 w-full py-1 px-2 rounded-full text-[10px] font-bold transition-colors border ${reg.isBadgeRole ? 'bg-indigo-600 text-white border-indigo-600 hover:bg-indigo-700' : 'bg-white text-gray-400 border-gray-300 hover:border-gray-400 hover:text-gray-600'}`}
+                                        title="ONにすると、このレジ名がスキル条件(バッジ)となり、名簿でそのバッジを持つスタッフのみ割り当てられます。"
+                                    >
+                                        <Badge size={10} />
+                                        {reg.isBadgeRole ? 'バッジ(役割) ON' : 'バッジ(役割) OFF'}
+                                    </button>
                                 </div>
-                                <div className={`text-center text-xs mt-2 ${reg.isActive ? 'text-blue-600 font-medium' : 'text-gray-400'}`}>{reg.isActive ? '稼働中' : '停止中'}</div>
-                                <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); removeRegister(reg.id); }} className="absolute bottom-2 right-2 p-2 bg-white border border-gray-200 text-gray-400 hover:text-red-600 hover:border-red-200 transition-colors z-50 hover:bg-red-50 rounded-full cursor-pointer shadow-sm" title="削除"><Trash2 size={18} className="pointer-events-none" /></button>
+
+                                <div className={`text-center text-xs mt-2 ${reg.isActive ? 'text-blue-600 font-medium' : 'text-gray-400'}`}>
+                                    {reg.isActive ? '稼働中' : '停止中'}
+                                </div>
+                                
+                                <button 
+                                    type="button"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        removeRegister(reg.id);
+                                    }}
+                                    className="absolute bottom-2 right-2 p-2 bg-white border border-gray-200 text-gray-400 hover:text-red-600 hover:border-red-200 transition-colors z-50 hover:bg-red-50 rounded-full cursor-pointer shadow-sm"
+                                    title="削除"
+                                >
+                                    <Trash2 size={18} className="pointer-events-none" />
+                                </button>
                             </div>
                         ))}
                     </div>
@@ -726,7 +847,9 @@
             );
         };
 
-        // --- components/ShiftView.tsx ---
+        // ==========================================
+        // Component: ShiftView
+        // ==========================================
         const CLOSED_SHIFT_ID = '__CLOSED__';
 
         const ShiftView = ({ data, setData }) => {
@@ -735,6 +858,7 @@
             const [showSettings, setShowSettings] = useState(false);
             const [showOverwriteModal, setShowOverwriteModal] = useState(false);
             const [timeCheckStaff, setTimeCheckStaff] = useState(null);
+            
             const [isHistoryOpen, setIsHistoryOpen] = useState(false);
             const [isStaffListOpen, setIsStaffListOpen] = useState(true);
             const [printScale, setPrintScale] = useState(1.0);
@@ -746,13 +870,15 @@
                 }
             }, [data.shifts, selectedDate]);
 
-            const currentShift = data.shifts.find(s => s.id === selectedShiftId) || data.shifts.find(s => s.date === selectedDate);
+            const currentShift = data.shifts.find(s => s.id === selectedShiftId) || 
+                                data.shifts.find(s => s.date === selectedDate);
+            
             const timeSlots = generateTimeSlots(data.settings.openTime, data.settings.closeTime);
             const activeRegisters = data.registers.filter(r => r.isActive).sort((a, b) => a.order - b.order);
 
             const formatDateWithDay = (dateStr) => {
                 const d = new Date(dateStr);
-                const dayName = ['日', '月', '火', '水', '木', '金', '土'][d.getDay()];
+                const dayName = ['日','月','火','水','木','金','土'][d.getDay()];
                 const holiday = getHolidayName(d);
                 return `${dateStr} (${dayName})${holiday ? ' ' + holiday : ''}`;
             };
@@ -769,8 +895,12 @@
 
             const performGeneration = () => {
                 const newShift = generateShift(selectedDate, data.staff, data.registers, data.settings);
+                
                 const existing = data.shifts.find(s => s.date === selectedDate);
-                const newShifts = existing ? data.shifts.map(s => s.date === selectedDate ? newShift : s) : [...data.shifts, newShift];
+                const newShifts = existing 
+                    ? data.shifts.map(s => s.date === selectedDate ? newShift : s)
+                    : [...data.shifts, newShift];
+
                 setData({ ...data, shifts: newShifts });
                 setSelectedShiftId(newShift.id);
                 setShowOverwriteModal(false);
@@ -781,10 +911,18 @@
                 const key = `${time}-${regId}`;
                 const newCells = {
                     ...currentShift.cells,
-                    [key]: { registerId: regId, staffId: value === '__EMPTY__' ? null : value, isManualOverride: true }
+                    [key]: {
+                        registerId: regId,
+                        staffId: value === '__EMPTY__' ? null : value,
+                        isManualOverride: true
+                    }
                 };
+                
                 const updatedShift = { ...currentShift, cells: newCells };
-                setData({ ...data, shifts: data.shifts.map(s => s.id === currentShift.id ? updatedShift : s) });
+                setData({
+                    ...data,
+                    shifts: data.shifts.map(s => s.id === currentShift.id ? updatedShift : s)
+                });
             };
 
             const toggleRegisterStatus = (regId) => {
@@ -803,7 +941,9 @@
                 setData({ ...data, settings: { ...data.settings, [key]: value } });
             };
 
-            const handlePrint = () => window.print();
+            const handlePrint = () => {
+                window.print();
+            };
 
             const handleStaffOverride = (staffId, status) => {
                 if (!currentShift) return;
@@ -814,7 +954,11 @@
                     newCells = { ...currentShift.cells };
                     Object.keys(newCells).forEach(key => {
                         if (newCells[key].staffId === staffId) {
-                            newCells[key] = { ...newCells[key], staffId: null, isManualOverride: true };
+                            newCells[key] = {
+                                ...newCells[key],
+                                staffId: null,
+                                isManualOverride: true
+                            };
                         }
                     });
                 }
@@ -887,24 +1031,39 @@
             return (
                 <div className="space-y-6">
                     <style>{`
-                        @media print {
-                            @page { size: landscape; margin: 3mm; }
-                            body { visibility: hidden; background: white !important; }
-                            button, nav, header { display: none !important; }
-                            body > *:not(#root) { display: none !important; }
-                            .shift-table-container { visibility: visible !important; position: fixed !important; top: 0 !important; left: 0 !important; width: 100vw !important; min-height: 100vh !important; background: white !important; z-index: 2147483647 !important; margin: 0 !important; padding: 5mm !important; display: block !important; overflow: visible !important; zoom: var(--print-scale, 1); }
-                            .shift-table-container * { visibility: visible !important; }
-                            .no-print { display: none !important; }
-                            .print-only { display: block !important; }
-                            .print-table-row { display: table-row-group !important; }
-                            .screen-table-row { display: none !important; }
-                            .print-area { width: 100%; border-collapse: collapse; font-size: 10px; table-layout: fixed; }
-                            .print-area th, .print-area td { border: 1px solid #444 !important; text-align: center; height: auto !important; vertical-align: middle; padding: 2px !important; white-space: nowrap; position: static !important; }
-                            .print-area th { background-color: #dbeafe !important; color: #1e3a8a !important; font-weight: 800 !important; height: 30px !important; font-size: 11px !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-                            .print-header { font-size: 18px; font-weight: bold; margin-bottom: 12px; text-align: center; padding-top: 10px; }
-                            thead { display: table-header-group; } tbody { display: table-row-group; } tr { break-inside: avoid; page-break-inside: avoid; }
+                    @media print {
+                        @page { size: landscape; margin: 3mm; }
+                        body { visibility: hidden; background: white !important; }
+                        button, nav, header { display: none !important; }
+                        body > *:not(#root) { display: none !important; }
+                        .shift-table-container { 
+                            visibility: visible !important; 
+                            position: fixed !important; 
+                            top: 0 !important; 
+                            left: 0 !important; 
+                            width: 100vw !important; 
+                            min-height: 100vh !important; 
+                            background: white !important; 
+                            z-index: 2147483647 !important; 
+                            margin: 0 !important; 
+                            padding: 5mm !important; 
+                            display: block !important; 
+                            overflow: visible !important; 
+                            zoom: var(--print-scale, 1); 
                         }
+                        .shift-table-container * { visibility: visible !important; }
+                        .no-print { display: none !important; }
+                        .print-only { display: block !important; }
+                        .print-table-row { display: table-row-group !important; }
+                        .screen-table-row { display: none !important; }
+                        .print-area { width: 100%; border-collapse: collapse; font-size: 10px; table-layout: fixed; }
+                        .print-area th, .print-area td { border: 1px solid #444 !important; text-align: center; height: auto !important; vertical-align: middle; padding: 2px !important; white-space: nowrap; position: static !important; }
+                        .print-area th { background-color: #dbeafe !important; color: #1e3a8a !important; font-weight: 800 !important; height: 30px !important; font-size: 11px !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+                        .print-header { font-size: 18px; font-weight: bold; margin-bottom: 12px; text-align: center; padding-top: 10px; }
+                        thead { display: table-header-group; } tbody { display: table-row-group; } tr { break-inside: avoid; page-break-inside: avoid; }
+                    }
                     `}</style>
+
                     {showOverwriteModal && (
                         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center no-print">
                             <div className="bg-white rounded-lg p-6 max-w-sm w-full shadow-xl">
@@ -914,6 +1073,7 @@
                             </div>
                         </div>
                     )}
+
                     {timeCheckStaff && (
                         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 no-print" onClick={() => setTimeCheckStaff(null)}>
                             <div className="bg-white rounded-lg p-6 max-w-sm w-full shadow-xl relative animate-fadeIn" onClick={e => e.stopPropagation()}>
@@ -940,6 +1100,7 @@
                             </div>
                         </div>
                     )}
+
                     <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 no-print">
                         <div className="mb-6 border-b pb-4">
                             <button onClick={() => setIsHistoryOpen(!isHistoryOpen)} className="flex items-center gap-2 text-gray-600 font-bold hover:text-blue-600 transition-colors w-full"><History size={18} /><span>作成済みシフト履歴 ({sortedHistory.length})</span>{isHistoryOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}</button>
@@ -965,6 +1126,7 @@
                                 <button onClick={checkAndGenerate} className="bg-blue-600 text-white px-6 py-3 rounded shadow hover:bg-blue-700 flex items-center gap-2 font-bold transition-colors"><RefreshCw size={20} /> シフト作成</button>
                             </div>
                         </div>
+
                         {currentShift && (
                             <div className="mt-6 border-t pt-4">
                                 <button onClick={() => setIsStaffListOpen(!isStaffListOpen)} className="flex items-center gap-2 w-full text-left font-bold text-gray-700 mb-3 hover:text-blue-600"><UserCheck size={18} /> <span>スタッフ出勤管理</span>{isStaffListOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}</button>
@@ -1002,6 +1164,7 @@
                                 )}
                             </div>
                         )}
+
                         {currentShift && (
                             <div className="mt-4 pt-4 border-t flex flex-col sm:flex-row justify-end items-end sm:items-center gap-4">
                                 <div className="flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded border border-gray-200"><span className="text-xs font-bold text-gray-600">印刷倍率:</span><input type="range" min="0.3" max="1.0" step="0.05" value={printScale} onChange={(e) => setPrintScale(Number(e.target.value))} className="w-24 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-gray-600" /><span className="text-xs w-8 text-right font-mono">{Math.round(printScale * 100)}%</span></div>
@@ -1009,6 +1172,7 @@
                             </div>
                         )}
                     </div>
+
                     {currentShift ? (
                         <div className="bg-white rounded-lg shadow border border-gray-200 overflow-hidden shift-table-container" style={{ '--print-scale': printScale }}>
                             <div className="hidden print-only print-header">{formatDateWithDay(currentShift.date)} シフト表</div>
@@ -1085,7 +1249,9 @@
             );
         };
 
-        // --- App.tsx ---
+        // ==========================================
+        // App.tsx
+        // ==========================================
         const TABS = { SHIFT: 'shift', STAFF: 'staff', REGISTER: 'register', DATA: 'data' };
 
         const generateDefaultRegisters = () => {
@@ -1207,5 +1373,5 @@
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
     </script>
-  </body>
+</body>
 </html>
