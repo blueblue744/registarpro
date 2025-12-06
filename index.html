@@ -616,10 +616,7 @@
             const toggleActive = (id, e) => {
                 if (editingId === id) return;
                 const target = e.target;
-                if (!target) return;
-                // If the click is on a specific interactive element, don't toggle active state
                 if (target.closest('button') || target.closest('input') || target.closest('select')) return;
-                
                 setRegisters(registers.map(r => r.id === id ? { ...r, isActive: !r.isActive } : r));
             };
 
@@ -696,40 +693,32 @@
                     </div>
                     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
                         {sortedRegisters.map((reg, index) => (
-                            <div key={reg.id} onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, index)} className={`relative rounded-lg border-2 transition-all duration-200 group pb-14 ${reg.isActive ? 'border-blue-500 bg-blue-50 shadow-md' : 'border-gray-200 bg-gray-50 opacity-60 hover:opacity-100'}`}>
-                                {/* Click target for Toggling Active - Separate from other buttons */}
-                                <div className="absolute inset-0 z-0 cursor-pointer" onClick={(e) => toggleActive(reg.id, e)}></div>
-
-                                {/* Content Container - pointer events pass through to toggle unless it's a button */}
-                                <div className="relative z-10 pointer-events-none p-4">
-                                    <div className="flex justify-between items-start mb-2">
-                                        <Monitor className={reg.isActive ? 'text-blue-600' : 'text-gray-400'} size={24} />
-                                        <div className="flex items-center gap-1 pointer-events-auto">
-                                            <span className="text-xs font-bold bg-white px-2 py-0.5 rounded border text-gray-600">No.{reg.order}</span>
-                                            <div className="cursor-grab text-gray-400 hover:text-gray-600 p-1 hover:bg-gray-200 rounded" draggable={true} onDragStart={(e) => handleDragStart(e, index)} onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}><GripVertical size={16} /></div>
-                                        </div>
+                            <div key={reg.id} onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, index)} className={`relative p-4 rounded-lg border-2 transition-all duration-200 group pb-14 ${reg.isActive ? 'border-blue-500 bg-blue-50 shadow-md' : 'border-gray-200 bg-gray-50 opacity-60 hover:opacity-100'}`} onClick={(e) => toggleActive(reg.id, e)}>
+                                <div className="flex justify-between items-start mb-2">
+                                    <Monitor className={reg.isActive ? 'text-blue-600' : 'text-gray-400'} size={24} />
+                                    <div className="flex items-center gap-1">
+                                        <span className="text-xs font-bold bg-white px-2 py-0.5 rounded border text-gray-600">No.{reg.order}</span>
+                                        <div className="cursor-grab text-gray-400 hover:text-gray-600 p-1 hover:bg-gray-200 rounded" draggable={true} onDragStart={(e) => handleDragStart(e, index)} onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}><GripVertical size={16} /></div>
                                     </div>
-                                    <div className="text-center mt-1 mb-1 min-h-[30px] flex items-center justify-center pointer-events-auto">
-                                        {editingId === reg.id ? (
-                                            <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
-                                                <input type="text" value={tempName} onChange={e => setTempName(e.target.value)} onBlur={() => saveEdit(reg.id)} onKeyDown={e => { if (e.key === 'Enter') saveEdit(reg.id) }} autoFocus className="w-full text-center border-2 border-blue-400 rounded px-1 py-0.5 text-sm font-bold text-gray-800 focus:outline-none" />
-                                                <button onMouseDown={(e) => { e.preventDefault(); saveEdit(reg.id); }} className="bg-green-500 text-white p-1 rounded hover:bg-green-600"><Check size={14} /></button>
-                                            </div>
-                                        ) : (
-                                            <div className="group/edit flex justify-center items-center gap-1 w-full" onClick={(e) => e.stopPropagation()}>
-                                                <h4 className={`font-bold truncate px-1 cursor-pointer hover:underline ${reg.isActive ? 'text-blue-900' : 'text-gray-500'}`} onClick={() => startEdit(reg)}>{reg.name}</h4>
-                                                <button onClick={(e) => { e.stopPropagation(); startEdit(reg); }} className="opacity-0 group-hover/edit:opacity-100 p-1 text-gray-400 hover:text-blue-600 rounded transition-opacity" title="名前を変更"><Edit2 size={12} /></button>
-                                            </div>
-                                        )}
-                                    </div>
-                                    <div className="mt-2 text-center pointer-events-auto" onClick={(e) => e.stopPropagation()}>
-                                        <button onClick={(e) => { e.stopPropagation(); toggleBadgeRole(reg.id); }} className={`flex items-center justify-center gap-1 w-full py-1 px-2 rounded-full text-[10px] font-bold transition-colors border ${reg.isBadgeRole ? 'bg-indigo-600 text-white border-indigo-600 hover:bg-indigo-700' : 'bg-white text-gray-400 border-gray-300 hover:border-gray-400 hover:text-gray-600'}`} title="ONにすると、このレジ名がスキル条件(バッジ)となり、名簿でそのバッジを持つスタッフのみ割り当てられます。"><Badge size={10} />{reg.isBadgeRole ? 'バッジ(役割) ON' : 'バッジ(役割) OFF'}</button>
-                                    </div>
-                                    <div className={`text-center text-xs mt-2 ${reg.isActive ? 'text-blue-600 font-medium' : 'text-gray-400'}`}>{reg.isActive ? '稼働中' : '停止中'}</div>
                                 </div>
-
-                                {/* Delete Button - Separated, higher z-index */}
-                                <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); removeRegister(reg.id); }} className="absolute bottom-2 right-2 p-2 bg-white border border-gray-200 text-gray-400 hover:text-red-600 hover:border-red-200 transition-colors z-50 hover:bg-red-50 rounded-full cursor-pointer shadow-sm pointer-events-auto" title="削除"><Trash2 size={18} className="pointer-events-none" /></button>
+                                <div className="text-center mt-1 mb-1 min-h-[30px] flex items-center justify-center">
+                                    {editingId === reg.id ? (
+                                        <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+                                            <input type="text" value={tempName} onChange={e => setTempName(e.target.value)} onBlur={() => saveEdit(reg.id)} onKeyDown={e => { if (e.key === 'Enter') saveEdit(reg.id) }} autoFocus className="w-full text-center border-2 border-blue-400 rounded px-1 py-0.5 text-sm font-bold text-gray-800 focus:outline-none" />
+                                            <button onMouseDown={(e) => { e.preventDefault(); saveEdit(reg.id); }} className="bg-green-500 text-white p-1 rounded hover:bg-green-600"><Check size={14} /></button>
+                                        </div>
+                                    ) : (
+                                        <div className="group/edit flex justify-center items-center gap-1 w-full">
+                                            <h4 className={`font-bold truncate px-1 ${reg.isActive ? 'text-blue-900' : 'text-gray-500'}`}>{reg.name}</h4>
+                                            <button onClick={(e) => { e.stopPropagation(); startEdit(reg); }} className="opacity-0 group-hover/edit:opacity-100 p-1 text-gray-400 hover:text-blue-600 rounded transition-opacity" title="名前を変更"><Edit2 size={12} /></button>
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="mt-2 text-center" onClick={(e) => e.stopPropagation()}>
+                                    <button onClick={(e) => { e.stopPropagation(); toggleBadgeRole(reg.id); }} className={`flex items-center justify-center gap-1 w-full py-1 px-2 rounded-full text-[10px] font-bold transition-colors border ${reg.isBadgeRole ? 'bg-indigo-600 text-white border-indigo-600 hover:bg-indigo-700' : 'bg-white text-gray-400 border-gray-300 hover:border-gray-400 hover:text-gray-600'}`} title="ONにすると、このレジ名がスキル条件(バッジ)となり、名簿でそのバッジを持つスタッフのみ割り当てられます。"><Badge size={10} />{reg.isBadgeRole ? 'バッジ(役割) ON' : 'バッジ(役割) OFF'}</button>
+                                </div>
+                                <div className={`text-center text-xs mt-2 ${reg.isActive ? 'text-blue-600 font-medium' : 'text-gray-400'}`}>{reg.isActive ? '稼働中' : '停止中'}</div>
+                                <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); removeRegister(reg.id); }} className="absolute bottom-2 right-2 p-2 bg-white border border-gray-200 text-gray-400 hover:text-red-600 hover:border-red-200 transition-colors z-50 hover:bg-red-50 rounded-full cursor-pointer shadow-sm" title="削除"><Trash2 size={18} className="pointer-events-none" /></button>
                             </div>
                         ))}
                     </div>
@@ -899,7 +888,7 @@
                 <div className="space-y-6">
                     <style>{`
                         @media print {
-                            @page { size: landscape; margin: 0; }
+                            @page { size: landscape; margin: 3mm; }
                             body { visibility: hidden; background: white !important; }
                             button, nav, header { display: none !important; }
                             body > *:not(#root) { display: none !important; }
@@ -1204,7 +1193,7 @@
                             <div className="max-w-2xl mx-auto space-y-8">
                                 <div className="bg-white p-6 rounded-lg shadow border"><h2 className="text-lg font-bold mb-4 flex items-center gap-2"><Save size={20} /> バックアップ</h2><p className="text-sm text-gray-600 mb-4">現在のすべてのデータ（スタッフ、レジ設定、シフト履歴）をJSONファイルとしてダウンロードします。</p><button onClick={handleBackup} className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700">バックアップをダウンロード</button></div>
                                 <div className="bg-white p-6 rounded-lg shadow border"><h2 className="text-lg font-bold mb-4 flex items-center gap-2"><History size={20} /> 復元</h2><p className="text-sm text-gray-600 mb-4">バックアップファイルを選択してデータを復元します。現在のデータは上書きされます。</p><input type="file" accept=".json" onChange={handleRestore} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" /></div>
-                                <div className="bg-red-50 p-6 rounded-lg shadow border border-red-100"><h2 className="text-lg font-bold mb-4 flex items-center gap-2 text-red-700"><Trash2 size={20} /> データ初期化</h2><p className="text-sm text-red-600 mb-4">アプリのすべてのデータを消去し、初期状態（レジ1〜20号など）に戻します。</p><button onClick={handleReset} className="bg-red-600 text-white px-6 py-2 rounded hover:bg-red-700 border border-red-700">データを初期化する</button></div>
+                                <div className="bg-red-50 p-6 rounded-lg shadow border border-red-100"><h2 className="text-lg font-bold mb-4 flex items-center gap-2 text-red-700"><Trash2Icon size={20} /> データ初期化</h2><p className="text-sm text-red-600 mb-4">アプリのすべてのデータを消去し、初期状態（レジ1〜20号など）に戻します。</p><button onClick={handleReset} className="bg-red-600 text-white px-6 py-2 rounded hover:bg-red-700 border border-red-700">データを初期化する</button></div>
                             </div>
                         )}
                     </main>
@@ -1212,6 +1201,7 @@
             );
         }
 
+        const Trash2Icon = ({ size }) => (<svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /><line x1="10" x2="10" y1="11" y2="17" /><line x1="14" x2="14" y1="11" y2="17" /></svg>);
         const TabButton = ({ active, onClick, icon, label }) => (<button onClick={onClick} className={`flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 rounded-lg transition-all ${active ? 'bg-blue-50 text-blue-700 ring-1 ring-blue-200' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900'}`}>{icon}<span className="text-[10px] font-bold leading-none">{label}</span></button>);
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
