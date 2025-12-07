@@ -21,36 +21,6 @@
             -ms-overflow-style: none;
             scrollbar-width: none;
         }
-        /* Print settings */
-        @media print {
-            @page { size: landscape; margin: 3mm; }
-            body { visibility: hidden; background: white !important; }
-            button, nav, header, .no-print { display: none !important; }
-            body > *:not(#root) { display: none !important; }
-            .shift-table-container { 
-                visibility: visible !important; 
-                position: fixed !important; 
-                top: 0 !important; 
-                left: 0 !important; 
-                width: 100vw !important; 
-                min-height: 100vh !important; 
-                background: white !important; 
-                z-index: 2147483647 !important; 
-                margin: 0 !important; 
-                padding: 0 !important; 
-                display: block !important; 
-                overflow: visible !important; 
-                zoom: var(--print-scale, 1); 
-            }
-            .shift-table-container * { visibility: visible !important; }
-            .print-table-row { display: table-row-group !important; }
-            .screen-table-row { display: none !important; }
-            .print-area { width: 100%; border-collapse: collapse; font-size: 9px; table-layout: fixed; }
-            .print-area th, .print-area td { border: 1px solid #444 !important; text-align: center; height: auto !important; vertical-align: middle; padding: 1px !important; white-space: nowrap; position: static !important; }
-            .print-area th { background-color: #dbeafe !important; color: #1e3a8a !important; font-weight: 800 !important; height: 20px !important; font-size: 10px !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-            .print-header { font-size: 16px; font-weight: bold; margin-bottom: 8px; text-align: center; padding-top: 5px; }
-            thead { display: table-header-group; } tbody { display: table-row-group; } tr { break-inside: avoid; page-break-inside: avoid; }
-        }
     </style>
     
     <!-- Import Map for React & Lucide -->
@@ -77,35 +47,39 @@
             Printer, RefreshCw, Settings, Clock, AlertCircle, ArrowLeftRight, 
             UserCheck, UserX, ChevronDown, ChevronUp, History, XCircle, Ban, 
             Users, Monitor, CalendarRange, Save, Database, Plus, Trash2, 
-            Edit2, GripVertical, Check, Badge, FileText, Upload, FileJson, Download
+            Edit2, GripVertical, Check, Badge, FileText, Upload, 
+            FolderOpen, Download, FileJson
         } from 'lucide-react';
 
         // ==========================================
-        // Constants & Types
+        // Constants
         // ==========================================
         const DEFAULT_OPEN_TIME = "09:00";
         const DEFAULT_CLOSE_TIME = "21:00";
         const TIME_SLOT_MINUTES = 60;
+        const DEFAULT_REGISTER_COUNT = 20;
         const PRIORITY_MAX = 100;
         const PRIORITY_MIN = 0;
         const LOCAL_STORAGE_KEY = 'regi_master_pro_v2';
 
+        // ==========================================
+        // Types & Definitions
+        // ==========================================
         const DAYS_OF_WEEK = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday', 'Holiday'];
-        const DAY_LABELS = { Monday: '月', Tuesday: '火', Wednesday: '水', Thursday: '木', Friday: '金', Saturday: '土', Sunday: '日', Holiday: '祝' };
+        const DAY_LABELS = {
+            Monday: '月',
+            Tuesday: '火',
+            Wednesday: '水',
+            Thursday: '木',
+            Friday: '金',
+            Saturday: '土',
+            Sunday: '日',
+            Holiday: '祝',
+        };
 
         // ==========================================
         // Logic Services
         // ==========================================
-        const parseTime = (timeStr) => {
-            if (!timeStr) return -1;
-            const [h, m] = timeStr.split(':').map(Number);
-            return h * 60 + m;
-        };
-        const formatTime = (minutes) => {
-            const h = Math.floor(minutes / 60);
-            const m = minutes % 60;
-            return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
-        };
         const generateTimeSlots = (startStr, endStr) => {
             const slots = [];
             let current = parseTime(startStr);
@@ -116,38 +90,79 @@
             }
             return slots;
         };
+
+        const parseTime = (timeStr) => {
+            if (!timeStr) return -1;
+            const [h, m] = timeStr.split(':').map(Number);
+            return h * 60 + m;
+        };
+
+        const formatTime = (minutes) => {
+            const h = Math.floor(minutes / 60);
+            const m = minutes % 60;
+            return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+        };
+
         const getDayOfWeek = (dateStr) => {
             const date = new Date(dateStr);
-            return ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][date.getDay()];
+            const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            return days[date.getDay()];
         };
+
         const getHolidayName = (date) => {
-            const y = date.getFullYear(); const m = date.getMonth() + 1; const d = date.getDate(); const w = date.getDay(); 
-            if (m===1 && d===1) return '元日'; if (m===2 && d===11) return '建国記念の日'; if (m===2 && d===23) return '天皇誕生日';
-            if (m===4 && d===29) return '昭和の日'; if (m===5 && d===3) return '憲法記念日'; if (m===5 && d===4) return 'みどりの日';
-            if (m===5 && d===5) return 'こどもの日'; if (m===11 && d===3) return '文化の日'; if (m===11 && d===23) return '勤労感謝の日';
-            if (m===1 && w===1 && Math.ceil(d/7)===2) return '成人の日'; if (m===7 && w===1 && Math.ceil(d/7)===3) return '海の日';
-            if (m===9 && w===1 && Math.ceil(d/7)===3) return '敬老の日'; if (m===10 && w===1 && Math.ceil(d/7)===2) return 'スポーツの日';
-            const vernal = Math.floor(20.8431 + 0.242194 * (y - 1980) - Math.floor((y - 1980) / 4));
-            if (m===3 && d===vernal) return '春分の日';
-            const autumnal = Math.floor(23.2488 + 0.242194 * (y - 1980) - Math.floor((y - 1980) / 4));
-            if (m===9 && d===autumnal) return '秋分の日';
-            if (m===8 && d===11) return '山の日';
+            const y = date.getFullYear();
+            const m = date.getMonth() + 1;
+            const d = date.getDate();
+            const w = date.getDay(); 
+
+            if (m === 1 && d === 1) return '元日';
+            if (m === 2 && d === 11) return '建国記念の日';
+            if (m === 2 && d === 23) return '天皇誕生日';
+            if (m === 4 && d === 29) return '昭和の日';
+            if (m === 5 && d === 3) return '憲法記念日';
+            if (m === 5 && d === 4) return 'みどりの日';
+            if (m === 5 && d === 5) return 'こどもの日';
+            if (m === 11 && d === 3) return '文化の日';
+            if (m === 11 && d === 23) return '勤労感謝の日';
+
+            if (m === 1 && w === 1 && Math.ceil(d / 7) === 2) return '成人の日';
+            if (m === 7 && w === 1 && Math.ceil(d / 7) === 3) return '海の日';
+            if (m === 9 && w === 1 && Math.ceil(d / 7) === 3) return '敬老の日';
+            if (m === 10 && w === 1 && Math.ceil(d / 7) === 2) return 'スポーツの日';
+
+            const vernalDay = Math.floor(20.8431 + 0.242194 * (y - 1980) - Math.floor((y - 1980) / 4));
+            if (m === 3 && d === vernalDay) return '春分の日';
+            const autumnalDay = Math.floor(23.2488 + 0.242194 * (y - 1980) - Math.floor((y - 1980) / 4));
+            if (m === 9 && d === autumnalDay) return '秋分の日';
+
+            if (m === 8 && d === 11) return '山の日';
+
             return null;
         };
+
         const isHoliday = (dateStr) => {
             const date = new Date(dateStr);
-            if (getHolidayName(date)) return true;
-            const yesterday = new Date(date); yesterday.setDate(date.getDate() - 1);
+            const name = getHolidayName(date);
+            if (name) return true;
+
+            const yesterday = new Date(date);
+            yesterday.setDate(date.getDate() - 1);
             if (yesterday.getDay() === 0 && getHolidayName(yesterday)) return true;
+
             return false;
         };
 
         const generateShift = (date, allStaff, registers, settings) => {
             const dayOfWeekName = getDayOfWeek(date);
             const isTodayHoliday = isHoliday(date);
+            
             const timeSlots = generateTimeSlots(settings.openTime, settings.closeTime);
             const cells = {};
-            const activeRegisters = registers.filter(r => r.isActive).sort((a, b) => a.order - b.order);
+            
+            const activeRegisters = registers
+                .filter(r => r.isActive)
+                .sort((a, b) => a.order - b.order);
+
             const availableStaffForDay = allStaff.filter(s => {
                 if (isTodayHoliday && s.daysOff.includes('Holiday')) return false;
                 if (s.daysOff.includes(dayOfWeekName)) return false;
@@ -156,61 +171,107 @@
 
             timeSlots.forEach((slotTime, timeIndex) => {
                 const slotMinutes = parseTime(slotTime);
+
                 const staffAvailableAtSlot = availableStaffForDay.filter(staff => {
                     let config = staff.baseShift;
-                    if (isTodayHoliday && staff.irregularShifts['Holiday']) config = staff.irregularShifts['Holiday'];
-                    else if (staff.irregularShifts[dayOfWeekName]) config = staff.irregularShifts[dayOfWeekName];
+                    if (isTodayHoliday && staff.irregularShifts['Holiday']) {
+                        config = staff.irregularShifts['Holiday'];
+                    } else if (staff.irregularShifts[dayOfWeekName]) {
+                        config = staff.irregularShifts[dayOfWeekName];
+                    }
                     
                     const startMin = parseTime(config.start);
                     const endMin = parseTime(config.end);
+                    
                     if (slotMinutes < startMin || slotMinutes >= endMin) return false;
+
                     if (config.breakStart && config.breakEnd) {
                         const breakStartMin = parseTime(config.breakStart);
                         const breakEndMin = parseTime(config.breakEnd);
-                        if (slotMinutes >= breakStartMin && slotMinutes < breakEndMin) return false;
+                        if (slotMinutes >= breakStartMin && slotMinutes < breakEndMin) {
+                            return false;
+                        }
                     }
+
                     if (config.exclusionStart && config.exclusionEnd) {
                         const exStartMin = parseTime(config.exclusionStart);
                         const exEndMin = parseTime(config.exclusionEnd);
-                        if (slotMinutes >= exStartMin && slotMinutes < exEndMin) return false;
+                        if (slotMinutes >= exStartMin && slotMinutes < exEndMin) {
+                            return false;
+                        }
                     }
+
                     return true;
                 });
 
                 let availablePool = [...staffAvailableAtSlot];
+
                 activeRegisters.forEach((reg) => {
                     let currentPool = [...availablePool];
-                    if (reg.isBadgeRole) currentPool = currentPool.filter(s => s.badges && s.badges.includes(reg.name));
                     
+                    if (reg.isBadgeRole) {
+                        currentPool = currentPool.filter(s => s.badges && s.badges.includes(reg.name));
+                    }
+
                     if (currentPool.length === 0) {
-                        cells[`${slotTime}-${reg.id}`] = { registerId: reg.id, staffId: null, isManualOverride: false };
+                        cells[`${slotTime}-${reg.id}`] = {
+                            registerId: reg.id,
+                            staffId: null,
+                            isManualOverride: false
+                        };
                         return;
                     }
+
                     const maxPriority = Math.max(...currentPool.map(s => s.priority));
                     const candidates = currentPool.filter(s => s.priority === maxPriority);
+
                     let selectedStaff = null;
-                    if (candidates.length === 1) selectedStaff = candidates[0];
-                    else {
+
+                    if (candidates.length === 1) {
+                        selectedStaff = candidates[0];
+                    } else {
                         if (timeIndex > 0) {
                             const prevTime = timeSlots[timeIndex - 1];
-                            const prevCell = cells[`${prevTime}-${reg.id}`];
-                            if (prevCell?.staffId) {
-                                const incumbent = candidates.find(s => s.id === prevCell.staffId);
-                                if (incumbent) selectedStaff = incumbent;
+                            const prevCellKey = `${prevTime}-${reg.id}`;
+                            const prevStaffId = cells[prevCellKey]?.staffId;
+
+                            if (prevStaffId) {
+                                const incumbent = candidates.find(s => s.id === prevStaffId);
+                                if (incumbent) {
+                                    selectedStaff = incumbent;
+                                }
                             }
                         }
-                        if (!selectedStaff) selectedStaff = candidates[Math.floor(Math.random() * candidates.length)];
+
+                        if (!selectedStaff) {
+                            selectedStaff = candidates[Math.floor(Math.random() * candidates.length)];
+                        }
                     }
-                    cells[`${slotTime}-${reg.id}`] = { registerId: reg.id, staffId: selectedStaff.id, isManualOverride: false };
+
+                    cells[`${slotTime}-${reg.id}`] = {
+                        registerId: reg.id,
+                        staffId: selectedStaff.id,
+                        isManualOverride: false
+                    };
+
                     availablePool = availablePool.filter(s => s.id !== selectedStaff.id);
                 });
             });
-            return { id: crypto.randomUUID(), date, cells, createdAt: Date.now(), attendanceOverrides: {} };
+
+            return {
+                id: crypto.randomUUID(),
+                date,
+                cells,
+                createdAt: Date.now(),
+                attendanceOverrides: {}
+            };
         };
 
         // ==========================================
-        // Components
+        // Component: StaffView
         // ==========================================
+        const EMPTY_TIME = { start: '09:00', end: '18:00', breakStart: '', breakEnd: '', exclusionStart: '', exclusionEnd: '' };
+
         const StaffView = ({ staffList, setStaffList, availableBadges = [] }) => {
             const [isEditing, setIsEditing] = useState(null);
             const [editForm, setEditForm] = useState(null);
@@ -219,124 +280,576 @@
             const [frozenOrder, setFrozenOrder] = useState(null);
 
             const displayList = useMemo(() => {
-                if (frozenOrder) return frozenOrder.map(id => staffList.find(s => s.id === id)).filter(s => !!s);
-                return [...staffList].sort((a, b) => b.priority - a.priority);
+                if (frozenOrder) {
+                    return frozenOrder
+                        .map(id => staffList.find(s => s.id === id))
+                        .filter(s => !!s);
+                } else {
+                    return [...staffList].sort((a, b) => b.priority - a.priority);
+                }
             }, [staffList, frozenOrder]);
 
-            const handleDragStart = () => { setFrozenOrder([...staffList].sort((a, b) => b.priority - a.priority).map(s => s.id)); };
-            const handleDragEnd = () => { setFrozenOrder(null); };
-            
+            const handleDragStart = () => {
+                const currentOrder = [...staffList].sort((a, b) => b.priority - a.priority).map(s => s.id);
+                setFrozenOrder(currentOrder);
+            };
+
+            const handleDragEnd = () => {
+                setFrozenOrder(null);
+            };
+
             const handleAdd = () => {
-                const newStaff = { id: crypto.randomUUID(), name: '新規スタッフ', type: 'SPECIALIST', priority: 50, daysOff: [], baseShift: { start: '09:00', end: '18:00' }, irregularShifts: {}, badges: [] };
+                const newStaff = {
+                    id: crypto.randomUUID(),
+                    name: '新規スタッフ',
+                    type: 'SPECIALIST',
+                    priority: 50,
+                    daysOff: [],
+                    baseShift: { ...EMPTY_TIME },
+                    irregularShifts: {},
+                    badges: []
+                };
                 setStaffList([...staffList, newStaff]);
                 startEdit(newStaff);
             };
-            const startEdit = (staff) => { setIsEditing(staff.id); setEditForm(JSON.parse(JSON.stringify({ ...staff, badges: staff.badges || [] }))); setDeleteConfirmId(null); };
-            const saveEdit = () => { if (!editForm) return; setStaffList(staffList.map(s => s.id === editForm.id ? editForm : s)); setIsEditing(null); setEditForm(null); };
+
+            const startEdit = (staff) => {
+                setIsEditing(staff.id);
+                setEditForm(JSON.parse(JSON.stringify({ ...staff, badges: staff.badges || [] })));
+                setDeleteConfirmId(null);
+            };
+
+            const saveEdit = () => {
+                if (!editForm) return;
+                setStaffList(staffList.map(s => s.id === editForm.id ? editForm : s));
+                setIsEditing(null);
+                setEditForm(null);
+            };
+
+            const handlePriorityChange = (id, newPriority) => {
+                setStaffList(staffList.map(s => s.id === id ? { ...s, priority: newPriority } : s));
+            };
+
             const deleteStaff = (id) => {
-                if (deleteConfirmId === id) { if (isEditing === id) { setIsEditing(null); setEditForm(null); } setStaffList(staffList.filter(s => s.id !== id)); setDeleteConfirmId(null); } 
-                else { setDeleteConfirmId(id); setTimeout(() => setDeleteConfirmId(prev => prev === id ? null : prev), 3000); }
-            };
-            const handlePriorityChange = (id, val) => { setStaffList(staffList.map(s => s.id === id ? { ...s, priority: val } : s)); };
-            const toggleDayOff = (day) => { const c = editForm.daysOff; setEditForm({ ...editForm, daysOff: c.includes(day) ? c.filter(d => d !== day) : [...c, day] }); };
-            const toggleBadge = (badge) => { const b = editForm.badges; setEditForm({ ...editForm, badges: b.includes(badge) ? b.filter(x => x !== badge) : [...b, badge] }); };
-
-            const handleExportCSV = () => {
-                const header = ['氏名','分類','優先度','バッジ(スキル)','公休','基本_開始','基本_終了','基本_外出','基本_戻り',...DAYS_OF_WEEK.flatMap(d=>[`${DAY_LABELS[d]}_開始`,`${DAY_LABELS[d]}_終了`])];
-                const rows = staffList.map(s => [s.name, s.type, s.priority, (s.badges||[]).join('|'), s.daysOff.map(d=>DAY_LABELS[d]).join(''), s.baseShift.start, s.baseShift.end, s.baseShift.breakStart||'', s.baseShift.breakEnd||'', ...DAYS_OF_WEEK.flatMap(d=>{const i=s.irregularShifts[d]; return i?[i.start,i.end]:['',''];})]);
-                const csv = [header.join(','), ...rows.map(r => r.map(c => `"${c}"`).join(','))].join('\n');
-                const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csv], { type: 'text/csv;charset=utf-8;' });
-                const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `staff_list.csv`; a.click();
-            };
-            const handleImportCSV = (e) => {
-                const file = e.target.files?.[0]; if (!file) return;
-                const r = new FileReader(); r.onload = (ev) => {
-                    const lines = ev.target.result.split(/\r\n|\n/).filter(l => l.trim() !== '');
-                    const newStaff = [];
-                    for(let i=1; i<lines.length; i++) {
-                        const c = lines[i].replace(/^"|"$/g,'').split('","');
-                        if(c.length < 9) continue;
-                        newStaff.push({ id: crypto.randomUUID(), name: c[0], type: c[1]==='部門担当'?'DEPARTMENT':'SPECIALIST', priority: Number(c[2])||50, badges: c[3]?c[3].split('|'):[], daysOff: [], baseShift: {start:c[5],end:c[6],breakStart:c[7],breakEnd:c[8]}, irregularShifts: {} });
+                if (deleteConfirmId === id) {
+                    if (isEditing === id) {
+                        setIsEditing(null);
+                        setEditForm(null);
                     }
-                    if(newStaff.length) { setStaffList([...staffList, ...newStaff]); alert(`${newStaff.length}件追加しました`); }
-                    if(fileInputRef.current) fileInputRef.current.value='';
-                }; r.readAsText(file);
+                    setStaffList(staffList.filter(s => s.id !== id));
+                    setDeleteConfirmId(null);
+                } else {
+                    setDeleteConfirmId(id);
+                    setTimeout(() => setDeleteConfirmId(prev => prev === id ? null : prev), 3000);
+                }
             };
 
-            if (isEditing && editForm) return (
-                <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200">
-                    <div className="flex justify-between items-center mb-6"><h3 className="text-xl font-bold text-gray-800">スタッフ編集</h3><button onClick={() => setIsEditing(null)} className="text-gray-500 hover:text-gray-700"><XCircle size={24} /></button></div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-4">
-                            <div><label className="block text-sm font-medium mb-1">氏名</label><input type="text" className="w-full border rounded p-2" value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} /></div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div><label className="block text-sm font-medium mb-1">分類</label><select className="w-full border rounded p-2" value={editForm.type} onChange={e => setEditForm({ ...editForm, type: e.target.value })}><option value="SPECIALIST">レジ専任</option><option value="DEPARTMENT">部門担当</option></select></div>
-                                <div><label className="block text-sm font-medium mb-1">優先度</label><input type="range" min="0" max="100" value={editForm.priority} onChange={e => setEditForm({...editForm, priority: Number(e.target.value)})} className="w-full" /></div>
-                            </div>
-                            <div><label className="block text-sm font-medium mb-1">バッジ(役割)</label><div className="flex flex-wrap gap-2 p-2 border rounded bg-gray-50">{availableBadges.map(b=><button key={b} onClick={()=>toggleBadge(b)} className={`text-xs px-2 py-1 rounded-full border ${editForm.badges.includes(b)?'bg-indigo-600 text-white':'bg-white'}`}>{b}</button>)}</div></div>
-                            <div><label className="block text-sm font-medium mb-1">公休</label><div className="flex gap-1">{DAYS_OF_WEEK.map(d=><button key={d} onClick={()=>toggleDayOff(d)} className={`w-8 h-8 rounded-full text-sm ${editForm.daysOff.includes(d)?'bg-gray-800 text-white':'bg-gray-200'}`}>{DAY_LABELS[d]}</button>)}</div></div>
+            const toggleDayOff = (day) => {
+                if (!editForm) return;
+                const current = editForm.daysOff;
+                const updated = current.includes(day)
+                    ? current.filter(d => d !== day)
+                    : [...current, day];
+                setEditForm({ ...editForm, daysOff: updated });
+            };
+
+            const toggleBadge = (badge) => {
+                if (editForm) {
+                    const hasBadge = editForm.badges.includes(badge);
+                    if (hasBadge) {
+                        setEditForm({ ...editForm, badges: editForm.badges.filter(b => b !== badge) });
+                    } else {
+                        setEditForm({ ...editForm, badges: [...editForm.badges, badge] });
+                    }
+                }
+            };
+
+            const getDayShortLabel = (day) => DAY_LABELS[day];
+            
+            const handleExportCSV = () => {
+                const exportList = [...staffList].sort((a, b) => b.priority - a.priority);
+                const daysOrder = DAYS_OF_WEEK;
+                
+                let header = ['氏名', '分類', '優先度', 'バッジ(スキル)', '公休', '基本_開始', '基本_終了', '基本_外出', '基本_戻り'];
+                daysOrder.forEach(d => {
+                    const l = getDayShortLabel(d);
+                    header.push(`${l}_開始`, `${l}_終了`, `${l}_外出`, `${l}_戻り`, `${l}_除外開始`, `${l}_除外終了`);
+                });
+
+                const rows = exportList.map(s => {
+                    const daysOffStr = s.daysOff.map(d => DAY_LABELS[d]).join('');
+                    const typeStr = s.type === 'SPECIALIST' ? 'レジ専任' : '部門担当';
+                    const badgesStr = (s.badges || []).join('|');
+                    
+                    const row = [
+                        s.name,
+                        typeStr,
+                        s.priority.toString(),
+                        badgesStr,
+                        daysOffStr,
+                        s.baseShift.start,
+                        s.baseShift.end,
+                        s.baseShift.breakStart,
+                        s.baseShift.breakEnd
+                    ];
+
+                    daysOrder.forEach(d => {
+                        const irr = s.irregularShifts[d];
+                        if (irr) {
+                            row.push(irr.start, irr.end, irr.breakStart, irr.breakEnd, irr.exclusionStart || '', irr.exclusionEnd || '');
+                        } else {
+                            row.push('', '', '', '', '', '');
+                        }
+                    });
+
+                    return row;
+                });
+                
+                const csvContent = [header.join(','), ...rows.map(r => r.map(c => `"${c}"`).join(','))].join('\n');
+                const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `regimaster_staff_${new Date().toISOString().slice(0,10)}.csv`;
+                a.click();
+            };
+
+            const isSameStaff = (s1, s2) => {
+                if (s1.name !== s2.name) return false;
+                if (s1.type !== s2.type) return false;
+                const days1 = [...s1.daysOff].sort();
+                const days2 = [...s2.daysOff].sort();
+                if (JSON.stringify(days1) !== JSON.stringify(days2)) return false;
+                if (JSON.stringify(s1.baseShift) !== JSON.stringify(s2.baseShift)) return false;
+                const sortObj = (obj) => Object.keys(obj).sort().reduce((acc, key) => { acc[key] = obj[key]; return acc; }, {});
+                if (JSON.stringify(sortObj(s1.irregularShifts)) !== JSON.stringify(sortObj(s2.irregularShifts))) return false;
+                return true;
+            };
+
+            const parseCSVRow = (row) => {
+                const result = [];
+                let current = '';
+                let inQuote = false;
+                for (let i = 0; i < row.length; i++) {
+                    const char = row[i];
+                    if (char === '"') {
+                        inQuote = !inQuote;
+                    } else if (char === ',' && !inQuote) {
+                        result.push(current);
+                        current = '';
+                    } else {
+                        current += char;
+                    }
+                }
+                result.push(current);
+                return result.map(s => s.trim().replace(/^"|"$/g, '').replace(/""/g, '"'));
+            };
+
+            const handleImportCSV = (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    try {
+                        const text = event.target?.result;
+                        const lines = text.split(/\r\n|\n/).filter(line => line.trim() !== '');
+                        const newStaffList = [];
+                        
+                        for (let i = 1; i < lines.length; i++) {
+                            const cols = parseCSVRow(lines[i]);
+                            if (cols.length < 9) continue;
+
+                            const name = cols[0];
+                            const typeStr = cols[1];
+                            const type = typeStr === '部門担当' ? 'DEPARTMENT' : 'SPECIALIST';
+                            const priority = Number(cols[2]) || 50;
+                            const badgesStr = cols[3];
+                            const badges = badgesStr ? badgesStr.split('|').filter(b => b.trim() !== '') : [];
+                            
+                            const daysOffRaw = cols[4];
+                            const daysOff = [];
+                            Object.entries(DAY_LABELS).forEach(([key, label]) => {
+                                if (daysOffRaw.includes(label)) daysOff.push(key);
+                            });
+
+                            const baseShift = {
+                                start: cols[5] || '09:00', end: cols[6] || '18:00',
+                                breakStart: cols[7] || '', breakEnd: cols[8] || '',
+                                exclusionStart: '', exclusionEnd: ''
+                            };
+
+                            const irregularShifts = {};
+                            let colIdx = 9;
+                            DAYS_OF_WEEK.forEach(d => {
+                                const s = cols[colIdx++]; const e = cols[colIdx++];
+                                const bs = cols[colIdx++]; const be = cols[colIdx++];
+                                const exS = cols[colIdx++]; const exE = cols[colIdx++];
+                                if (s && e) irregularShifts[d] = { start: s, end: e, breakStart: bs||'', breakEnd: be||'', exclusionStart: exS||'', exclusionEnd: exE||'' };
+                            });
+
+                            newStaffList.push({ id: crypto.randomUUID(), name, type, priority, daysOff, baseShift, irregularShifts, badges });
+                        }
+                        
+                        const uniqueNewStaff = newStaffList.filter(newS => !staffList.some(existS => isSameStaff(existS, newS)));
+                        
+                        if (uniqueNewStaff.length > 0) {
+                            setStaffList([...staffList, ...uniqueNewStaff]);
+                            alert(`${uniqueNewStaff.length}件のスタッフを追加しました。`);
+                        } else {
+                            alert('新しいスタッフは追加されませんでした（すべて重複または空）。');
+                        }
+
+                    } catch (err) {
+                        console.error(err);
+                        alert('CSVの読み込み中にエラーが発生しました。');
+                    }
+                    if (fileInputRef.current) fileInputRef.current.value = '';
+                };
+                reader.readAsText(file);
+            };
+
+            if (isEditing && editForm) {
+                return (
+                    <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-xl font-bold text-gray-800">スタッフ編集</h3>
+                            <button onClick={() => setIsEditing(null)} className="text-gray-500 hover:text-gray-700"><X size={24} /></button>
                         </div>
-                        <div className="space-y-4">
-                            <div className="bg-blue-50 p-3 rounded"><span className="text-xs font-bold text-blue-800 block mb-2">基本シフト</span><div className="flex gap-2"><input type="time" className="border p-1" value={editForm.baseShift.start} onChange={e=>setEditForm({...editForm,baseShift:{...editForm.baseShift,start:e.target.value}})} /><span>~</span><input type="time" className="border p-1" value={editForm.baseShift.end} onChange={e=>setEditForm({...editForm,baseShift:{...editForm.baseShift,end:e.target.value}})} /></div></div>
-                            <div className="h-64 overflow-y-auto pr-2">{DAYS_OF_WEEK.map(d=>{
-                                const irr = editForm.irregularShifts[d];
-                                return (<div key={d} className={`p-2 border rounded mb-2 text-sm ${irr?'bg-yellow-50':'bg-gray-50'}`}><div className="flex justify-between font-bold"><span>{DAY_LABELS[d]}</span>{irr?<button onClick={()=>{const n={...editForm.irregularShifts};delete n[d];setEditForm({...editForm,irregularShifts:n})}} className="text-red-500">解除</button>:<button onClick={()=>setEditForm({...editForm,irregularShifts:{...editForm.irregularShifts,[d]:{...editForm.baseShift}}})} className="text-blue-500">個別設定</button>}</div>{irr && <div className="mt-1 flex gap-1"><input type="time" value={irr.start} onChange={e=>setEditForm({...editForm,irregularShifts:{...editForm.irregularShifts,[d]:{...irr,start:e.target.value}}})} className="w-20" />~<input type="time" value={irr.end} onChange={e=>setEditForm({...editForm,irregularShifts:{...editForm.irregularShifts,[d]:{...irr,end:e.target.value}}})} className="w-20" /></div>}</div>);
-                            })}</div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">氏名</label>
+                                    <input type="text" className="w-full border rounded p-2 focus:ring-2 focus:ring-blue-500 outline-none" value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} />
+                                </div>
+                                
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">分類</label>
+                                        <select className="w-full border rounded p-2" value={editForm.type} onChange={e => setEditForm({ ...editForm, type: e.target.value })}>
+                                            <option value="SPECIALIST">レジ専任</option>
+                                            <option value="DEPARTMENT">部門担当</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">優先度 (0-100)</label>
+                                        <div className="flex items-center gap-2">
+                                            <input type="number" min={PRIORITY_MIN} max={PRIORITY_MAX} className="w-20 border rounded p-2 text-center" value={editForm.priority} onChange={e => setEditForm({ ...editForm, priority: Number(e.target.value) })} />
+                                            <input type="range" min={PRIORITY_MIN} max={PRIORITY_MAX} value={editForm.priority} onChange={e => setEditForm({...editForm, priority: Number(e.target.value)})} className="flex-1 cursor-pointer" />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">バッジ (スキル・役割)</label>
+                                    <p className="text-xs text-gray-500 mb-2">レジ設定で「バッジ(役割)」をONにすると、ここに選択肢として表示されます。</p>
+                                    <div className="flex flex-wrap gap-2 p-3 border rounded bg-gray-50 min-h-[50px]">
+                                        {availableBadges.length === 0 && <span className="text-gray-400 text-xs">有効なバッジ役職のレジがありません</span>}
+                                        {availableBadges.map((badgeName) => {
+                                            const hasBadge = editForm.badges.includes(badgeName);
+                                            return (
+                                                <button key={badgeName} onClick={() => toggleBadge(badgeName)} className={`flex items-center gap-1 text-xs px-3 py-1.5 rounded-full border transition-all ${hasBadge ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-white text-gray-500 border-gray-300 hover:bg-gray-100'}`}>
+                                                    {hasBadge && <Badge size={12} fill="currentColor" />} {badgeName}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">公休曜日</label>
+                                    <div className="flex flex-wrap gap-2">
+                                        {DAYS_OF_WEEK.map(day => (
+                                            <button key={day} onClick={() => toggleDayOff(day)} className={`w-9 h-9 flex items-center justify-center rounded-full text-sm font-bold transition-colors ${editForm.daysOff.includes(day) ? (day === 'Holiday' || day === 'Sunday' ? 'bg-red-500 text-white' : day === 'Saturday' ? 'bg-blue-500 text-white' : 'bg-gray-800 text-white') : 'bg-gray-100 text-gray-400 hover:bg-gray-200'}`}>
+                                                {DAY_LABELS[day]}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="space-y-4 border-l pl-0 md:pl-6">
+                                <h4 className="font-semibold text-gray-700 border-b pb-2">シフト時間設定</h4>
+                                <div className="bg-blue-50 p-3 rounded-md">
+                                    <span className="text-xs font-bold text-blue-800 block mb-2">基本シフト</span>
+                                    <div className="flex gap-2 items-end mb-2">
+                                        <div className="flex-1"><label className="text-xs text-gray-500">出勤</label><input type="time" className="w-full border rounded p-1 bg-white" value={editForm.baseShift.start} onChange={e => setEditForm({...editForm, baseShift: {...editForm.baseShift, start: e.target.value}})} /></div>
+                                        <span className="pb-1">~</span>
+                                        <div className="flex-1"><label className="text-xs text-gray-500">退勤</label><input type="time" className="w-full border rounded p-1 bg-white" value={editForm.baseShift.end} onChange={e => setEditForm({...editForm, baseShift: {...editForm.baseShift, end: e.target.value}})} /></div>
+                                    </div>
+                                </div>
+                                <div className="mt-4">
+                                    <h4 className="font-semibold text-gray-700 text-sm mb-2">曜日別イレギュラー (基本設定より優先)</h4>
+                                    <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                                        {DAYS_OF_WEEK.map(day => {
+                                            const irregular = editForm.irregularShifts[day];
+                                            const dayLabel = day === 'Holiday' ? '祝日' : `${DAY_LABELS[day]}曜日`;
+                                            return (
+                                                <div key={day} className={`text-sm border rounded p-2 ${irregular ? 'bg-yellow-50 border-yellow-200' : 'bg-gray-50 border-transparent'}`}>
+                                                    <div className="flex justify-between items-center mb-1">
+                                                        <span className="font-bold text-gray-700">{dayLabel}</span>
+                                                        {irregular ? (
+                                                            <button onClick={() => { const newIrreg = {...editForm.irregularShifts}; delete newIrreg[day]; setEditForm({...editForm, irregularShifts: newIrreg}); }} className="text-red-500 hover:text-red-700 text-xs flex items-center gap-1"><Trash2 size={12}/> 解除</button>
+                                                        ) : (
+                                                            <button onClick={() => setEditForm({...editForm, irregularShifts: {...editForm.irregularShifts, [day]: {...editForm.baseShift}}})} className="text-blue-600 hover:underline text-xs">+ 個別設定</button>
+                                                        )}
+                                                    </div>
+                                                    {irregular && (
+                                                        <>
+                                                            <div className="grid grid-cols-2 gap-2 mb-2">
+                                                                <div className="flex gap-1 items-center"><input type="time" className="w-full border rounded px-1 text-xs bg-white" value={irregular.start} onChange={e => setEditForm({...editForm, irregularShifts: {...editForm.irregularShifts, [day]: {...irregular, start: e.target.value}}})} /><span>-</span><input type="time" className="w-full border rounded px-1 text-xs bg-white" value={irregular.end} onChange={e => setEditForm({...editForm, irregularShifts: {...editForm.irregularShifts, [day]: {...irregular, end: e.target.value}}})} /></div>
+                                                            </div>
+                                                            <div className="flex gap-1 items-center bg-gray-100 p-1 rounded"><span className="text-xs text-gray-500 whitespace-nowrap">除外</span><input type="time" className="w-full border rounded px-1 text-xs bg-white" value={irregular.exclusionStart || ''} onChange={e => setEditForm({...editForm, irregularShifts: {...editForm.irregularShifts, [day]: {...irregular, exclusionStart: e.target.value}}})} /><span>-</span><input type="time" className="w-full border rounded px-1 text-xs bg-white" value={irregular.exclusionEnd || ''} onChange={e => setEditForm({...editForm, irregularShifts: {...editForm.irregularShifts, [day]: {...irregular, exclusionEnd: e.target.value}}})} /></div>
+                                                        </>
+                                                    )}
+                                                </div>
+                                            )
+                                        })}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="mt-6 flex justify-end gap-3 pt-4 border-t">
+                            <button onClick={() => setIsEditing(null)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded">キャンセル</button>
+                            <button onClick={saveEdit} className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-2"><Save size={18} /> 保存</button>
                         </div>
                     </div>
-                    <div className="mt-6 flex justify-end gap-3 pt-4 border-t"><button onClick={() => setIsEditing(null)} className="px-4 py-2 bg-gray-100 rounded">キャンセル</button><button onClick={saveEdit} className="px-6 py-2 bg-blue-600 text-white rounded">保存</button></div>
-                </div>
-            );
+                );
+            }
 
             return (
-                <div className="bg-white rounded-lg shadow border overflow-hidden">
-                    <div className="p-3 border-b flex justify-between items-center bg-gray-50">
+                <div className="bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
+                    <div className="p-4 border-b border-gray-100 flex flex-wrap justify-between items-center bg-gray-50 gap-2">
                         <h3 className="font-bold text-gray-700">登録スタッフ一覧 ({displayList.length}名)</h3>
                         <div className="flex gap-2">
                             <input type="file" ref={fileInputRef} accept=".csv" className="hidden" onChange={handleImportCSV} />
-                            <button onClick={()=>fileInputRef.current?.click()} className="flex items-center gap-1 px-3 py-1 bg-white border rounded text-xs whitespace-nowrap hover:bg-gray-50"><Upload size={14}/> CSV読込</button>
-                            <button onClick={handleExportCSV} className="flex items-center gap-1 px-3 py-1 bg-white border rounded text-xs whitespace-nowrap hover:bg-gray-50"><FileText size={14}/> CSV出力</button>
-                            <button onClick={handleAdd} className="flex items-center gap-1 px-3 py-1 bg-green-600 text-white rounded text-xs whitespace-nowrap hover:bg-green-700"><Plus size={14}/> 新規登録</button>
+                            
+                            {/* Modified Buttons for No Wrap and Smaller Text */}
+                            <button onClick={() => fileInputRef.current?.click()} className="flex items-center gap-1 px-3 py-1.5 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 border border-gray-300 text-xs whitespace-nowrap">
+                                <Upload size={14} /> CSV読込
+                            </button>
+                            <button onClick={handleExportCSV} className="flex items-center gap-1 px-3 py-1.5 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 border border-gray-300 text-xs whitespace-nowrap">
+                                <FileText size={14} /> CSV出力
+                            </button>
+                            <button onClick={handleAdd} className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors shadow-sm ml-2 text-xs whitespace-nowrap">
+                                <Plus size={18} /> 新規登録
+                            </button>
+
                         </div>
                     </div>
                     <div className="overflow-x-auto">
                         <table className="w-full text-left text-sm whitespace-nowrap">
-                            <thead className="bg-gray-100 text-gray-600 border-b"><tr><th className="p-2">氏名</th><th className="p-2">分類</th><th className="p-2">優先度</th><th className="p-2">バッジ</th><th className="p-2">基本シフト</th><th className="p-2 text-right">操作</th></tr></thead>
-                            <tbody className="divide-y">{displayList.map(s=>(<tr key={s.id} className="hover:bg-gray-50"><td className="p-2 font-bold">{s.name}</td><td className="p-2"><span className="bg-gray-100 px-2 py-0.5 rounded text-xs">{s.type}</span></td><td className="p-2"><input type="range" className="w-24 h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer" value={s.priority} onChange={e=>handlePriorityChange(s.id,Number(e.target.value))} onMouseDown={handleDragStart} onMouseUp={handleDragEnd} /></td><td className="p-2 text-xs text-gray-500">{s.badges?.join(', ')}</td><td className="p-2">{s.baseShift.start}-{s.baseShift.end}</td><td className="p-2 text-right flex justify-end gap-2"><button onClick={()=>startEdit(s)} className="text-blue-600"><Edit2 size={16}/></button><button onClick={()=>deleteStaff(s.id)} className={deleteConfirmId===s.id?"text-white bg-red-600 px-2 rounded":"text-red-600"}><Trash2 size={16}/></button></td></tr>))}</tbody>
+                            <thead className="bg-gray-100 text-gray-600 border-b">
+                                <tr>
+                                    <th className="p-3 min-w-[120px]">氏名</th>
+                                    <th className="p-3 min-w-[100px]">分類</th>
+                                    <th className="p-3 w-48">優先度調整</th>
+                                    <th className="p-3 min-w-[150px]">バッジ(スキル)</th>
+                                    <th className="p-3 min-w-[120px]">基本シフト</th>
+                                    <th className="p-3 min-w-[100px]">公休</th>
+                                    <th className="p-3 text-right">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100">
+                                {displayList.length === 0 && (
+                                    <tr><td colSpan={7} className="p-8 text-center text-gray-400">スタッフが登録されていません</td></tr>
+                                )}
+                                {displayList.map(staff => (
+                                    <tr key={staff.id} className="hover:bg-gray-50 transition-colors">
+                                        <td className="p-3 font-medium">{staff.name}</td>
+                                        <td className="p-3">
+                                            <span className={`px-2 py-1 rounded text-xs ${staff.type === 'SPECIALIST' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>{staff.type === 'SPECIALIST' ? 'レジ専任' : '部門担当'}</span>
+                                        </td>
+                                        <td className="p-3">
+                                            <div className="flex items-center gap-3">
+                                                <span className="text-xs font-bold w-6 text-right">{staff.priority}</span>
+                                                <input type="range" min={PRIORITY_MIN} max={PRIORITY_MAX} value={staff.priority} onChange={(e) => handlePriorityChange(staff.id, Number(e.target.value))} onMouseDown={handleDragStart} onTouchStart={handleDragStart} onMouseUp={handleDragEnd} onTouchEnd={handleDragEnd} onMouseLeave={handleDragEnd} className="w-32 cursor-pointer h-2 bg-gray-200 rounded-lg appearance-none accent-blue-600" title={`優先度: ${staff.priority}`} />
+                                            </div>
+                                        </td>
+                                        <td className="p-3">
+                                            <div className="flex gap-1 overflow-x-auto max-w-[300px] items-center no-scrollbar">
+                                                {staff.badges && staff.badges.length > 0 ? staff.badges.map((b,i) => (<span key={i} className="text-[10px] bg-indigo-100 text-indigo-800 px-1.5 py-0.5 rounded border border-indigo-200 whitespace-nowrap">{b}</span>)) : <span className="text-gray-300 text-xs">-</span>}
+                                            </div>
+                                        </td>
+                                        <td className="p-3 text-gray-600">{staff.baseShift.start} - {staff.baseShift.end}</td>
+                                        <td className="p-3 text-gray-600 font-medium">{staff.daysOff.map(d => DAY_LABELS[d]).join('')}</td>
+                                        <td className="p-3 text-right space-x-2">
+                                            <button onClick={() => startEdit(staff)} className="text-blue-600 hover:text-blue-800 p-1"><Edit2 size={16} /></button>
+                                            <button onClick={() => deleteStaff(staff.id)} className={`p-1 transition-colors rounded ${deleteConfirmId === staff.id ? 'bg-red-600 text-white hover:bg-red-700 px-2' : 'text-red-600 hover:text-red-800'}`}>
+                                                {deleteConfirmId === staff.id ? <span className="flex items-center gap-1 text-xs">確定?</span> : <Trash2 size={16} />}
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
                         </table>
                     </div>
                 </div>
             );
         };
 
+        // ==========================================
+        // Component: RegisterView
+        // ==========================================
         const RegisterView = ({ registers, setRegisters }) => {
             const [editingId, setEditingId] = useState(null);
             const [tempName, setTempName] = useState("");
-            const addReg = () => setRegisters([...registers, { id: crypto.randomUUID(), name: `${registers.length+1}号`, isActive: true, order: registers.length+1, isBadgeRole: false }]);
-            const removeReg = (id) => { if(confirm('削除しますか？')) setRegisters(registers.filter(r=>r.id!==id)); };
-            const startEdit = (r) => { setEditingId(r.id); setTempName(r.name); };
-            const saveEdit = (id) => { if(tempName.trim()) setRegisters(registers.map(r=>r.id===id?{...r,name:tempName.trim()}:r)); setEditingId(null); };
-            const toggleActive = (id) => setRegisters(registers.map(r=>r.id===id?{...r,isActive:!r.isActive}:r));
-            const toggleBadge = (id) => setRegisters(registers.map(r=>r.id===id?{...r,isBadgeRole:!r.isBadgeRole}:r));
-            const handleDrop = (e, targetIdx) => {
-                const srcIdx = Number(e.dataTransfer.getData('text'));
-                if(srcIdx===targetIdx) return;
-                const list = [...registers].sort((a,b)=>a.order-b.order);
-                const [moved] = list.splice(srcIdx, 1);
-                list.splice(targetIdx, 0, moved);
-                setRegisters(list.map((r,i)=>({...r, order:i+1})));
+            
+            const toggleActive = (id, e) => {
+                if (editingId === id) return;
+                const target = e.target;
+                if (target.closest('button') || target.closest('input') || target.closest('select')) return;
+                setRegisters(registers.map(r => r.id === id ? { ...r, isActive: !r.isActive } : r));
             };
 
+            const addRegister = () => {
+                const nextNum = registers.length + 1;
+                setRegisters([...registers, {
+                    id: crypto.randomUUID(),
+                    name: `${nextNum}号`,
+                    isActive: true,
+                    order: nextNum,
+                    isBadgeRole: false
+                }]);
+            };
+
+            const removeRegister = (id) => {
+                if (window.confirm('削除しますか？')) {
+                    setRegisters(registers.filter(r => r.id !== id));
+                }
+            };
+
+            const startEdit = (reg) => {
+                setEditingId(reg.id);
+                setTempName(reg.name);
+            };
+
+            const saveEdit = (id) => {
+                if (tempName.trim()) {
+                    setRegisters(registers.map(r => r.id === id ? { ...r, name: tempName.trim() } : r));
+                }
+                setEditingId(null);
+            };
+
+            const handleDragStart = (e, index) => {
+                e.dataTransfer.setData('text/plain', index.toString());
+                e.dataTransfer.effectAllowed = 'move';
+            };
+
+            const handleDragOver = (e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+            };
+
+            const handleDrop = (e, targetIndex) => {
+                e.preventDefault();
+                const sourceIndexStr = e.dataTransfer.getData('text/plain');
+                if (!sourceIndexStr) return;
+                
+                const sourceIndex = parseInt(sourceIndexStr, 10);
+                if (sourceIndex === targetIndex) return;
+
+                const newSorted = [...sortedRegisters];
+                const [movedItem] = newSorted.splice(sourceIndex, 1);
+                newSorted.splice(targetIndex, 0, movedItem);
+
+                const updatedRegisters = newSorted.map((reg, index) => ({
+                    ...reg,
+                    order: index + 1
+                }));
+                
+                setRegisters(updatedRegisters);
+            };
+
+            const toggleBadgeRole = (id) => {
+                setRegisters(registers.map(r => r.id === id ? { ...r, isBadgeRole: !r.isBadgeRole } : r));
+            };
+
+            const sortedRegisters = [...registers].sort((a, b) => a.order - b.order);
+
             return (
-                <div className="space-y-4">
-                    <div className="flex justify-between items-center bg-white p-3 rounded shadow-sm border"><h3 className="font-bold">レジ管理</h3><button onClick={addReg} className="flex items-center gap-1 bg-indigo-600 text-white px-3 py-1 rounded text-sm hover:bg-indigo-700"><Plus size={14}/> 追加</button></div>
-                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                        {[...registers].sort((a,b)=>a.order-b.order).map((r, i)=>(
-                            <div key={r.id} draggable onDragStart={e=>e.dataTransfer.setData('text',i)} onDragOver={e=>e.preventDefault()} onDrop={e=>handleDrop(e,i)} className={`p-3 rounded border-2 transition-all ${r.isActive?'border-blue-500 bg-blue-50 shadow':'border-gray-200 bg-gray-50 opacity-60'}`}>
-                                <div className="flex justify-between mb-2"><Monitor size={20} className={r.isActive?'text-blue-600':'text-gray-400'} /><div className="cursor-grab text-gray-400"><GripVertical size={14}/></div></div>
-                                <div className="text-center h-8 flex justify-center items-center">{editingId===r.id ? <input autoFocus className="w-full text-center border rounded" value={tempName} onChange={e=>setTempName(e.target.value)} onBlur={()=>saveEdit(r.id)} onKeyDown={e=>{if(e.key==='Enter')saveEdit(r.id)}} /> : <span onClick={()=>startEdit(r)} className="font-bold cursor-pointer">{r.name}</span>}</div>
-                                <div className="mt-2 text-center"><button onClick={()=>toggleBadge(r.id)} className={`text-[10px] px-2 py-0.5 rounded border ${r.isBadgeRole?'bg-indigo-600 text-white':'bg-white text-gray-500'}`}>{r.isBadgeRole?'バッジ必須ON':'バッジ必須OFF'}</button></div>
-                                <div className="mt-2 flex justify-between items-center"><button onClick={()=>toggleActive(r.id)} className={`text-xs ${r.isActive?'text-blue-600 font-bold':'text-gray-400'}`}>{r.isActive?'稼働中':'停止'}</button><button onClick={()=>removeReg(r.id)} className="text-gray-300 hover:text-red-500"><Trash2 size={14}/></button></div>
+                <div className="space-y-6">
+                    <div className="flex justify-between items-center bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+                        <div>
+                            <h3 className="font-bold text-lg text-gray-800">レジ管理</h3>
+                            <p className="text-sm text-gray-500">
+                                右上のハンドル<GripVertical className="inline w-3 h-3 mx-1"/>で並び替え、
+                                名前をクリックまたは<Edit2 className="inline w-3 h-3 mx-1"/>で名称変更できます。<br/>
+                                「バッジ(役割)」をONにすると、そのレジ名がスキル条件となり、名簿でそのバッジを持つスタッフのみが割り当てられます。
+                            </p>
+                        </div>
+                        <button onClick={addRegister} className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 shadow-sm">
+                            <Plus size={16} /> レジ追加
+                        </button>
+                    </div>
+
+                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                        {sortedRegisters.map((reg, index) => (
+                            <div 
+                                key={reg.id} 
+                                onDragOver={handleDragOver}
+                                onDrop={(e) => handleDrop(e, index)}
+                                className={`relative p-4 rounded-lg border-2 transition-all duration-200 group pb-14 ${reg.isActive ? 'border-blue-500 bg-blue-50 shadow-md' : 'border-gray-200 bg-gray-50 opacity-60 hover:opacity-100'}`}
+                                onClick={(e) => toggleActive(reg.id, e)}
+                            >
+                                <div className="flex justify-between items-start mb-2">
+                                    <Monitor className={reg.isActive ? 'text-blue-600' : 'text-gray-400'} size={24} />
+                                    <div className="flex items-center gap-1">
+                                        <span className="text-xs font-bold bg-white px-2 py-0.5 rounded border text-gray-600">No.{reg.order}</span>
+                                        <div 
+                                            className="cursor-grab text-gray-400 hover:text-gray-600 p-1 hover:bg-gray-200 rounded"
+                                            draggable={true}
+                                            onDragStart={(e) => handleDragStart(e, index)}
+                                            onClick={(e) => e.stopPropagation()}
+                                            onMouseDown={(e) => e.stopPropagation()}
+                                        >
+                                            <GripVertical size={16} />
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div className="text-center mt-1 mb-1 min-h-[30px] flex items-center justify-center">
+                                    {editingId === reg.id ? (
+                                        <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+                                            <input type="text" value={tempName} onChange={e => setTempName(e.target.value)} onBlur={() => saveEdit(reg.id)} onKeyDown={e => { if(e.key === 'Enter') saveEdit(reg.id) }} autoFocus className="w-full text-center border-2 border-blue-400 rounded px-1 py-0.5 text-sm font-bold text-gray-800 focus:outline-none" />
+                                            <button onMouseDown={(e) => { e.preventDefault(); saveEdit(reg.id); }} className="bg-green-500 text-white p-1 rounded hover:bg-green-600"><Check size={14} /></button>
+                                        </div>
+                                    ) : (
+                                        <div className="group/edit flex justify-center items-center gap-1 w-full">
+                                            <h4 className={`font-bold truncate px-1 ${reg.isActive ? 'text-blue-900' : 'text-gray-500'}`}>{reg.name}</h4>
+                                            <button onClick={(e) => { e.stopPropagation(); startEdit(reg); }} className="opacity-0 group-hover/edit:opacity-100 p-1 text-gray-400 hover:text-blue-600 rounded transition-opacity" title="名前を変更"><Edit2 size={12} /></button>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="mt-2 text-center" onClick={(e) => e.stopPropagation()}>
+                                    <button 
+                                        onClick={(e) => { e.stopPropagation(); toggleBadgeRole(reg.id); }}
+                                        className={`flex items-center justify-center gap-1 w-full py-1 px-2 rounded-full text-[10px] font-bold transition-colors border ${reg.isBadgeRole ? 'bg-indigo-600 text-white border-indigo-600 hover:bg-indigo-700' : 'bg-white text-gray-400 border-gray-300 hover:border-gray-400 hover:text-gray-600'}`}
+                                        title="ONにすると、このレジ名がスキル条件(バッジ)となり、名簿でそのバッジを持つスタッフのみ割り当てられます。"
+                                    >
+                                        <Badge size={10} />
+                                        {reg.isBadgeRole ? 'バッジ(役割) ON' : 'バッジ(役割) OFF'}
+                                    </button>
+                                </div>
+
+                                <div className={`text-center text-xs mt-2 ${reg.isActive ? 'text-blue-600 font-medium' : 'text-gray-400'}`}>
+                                    {reg.isActive ? '稼働中' : '停止中'}
+                                </div>
+                                
+                                <button 
+                                    type="button"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        removeRegister(reg.id);
+                                    }}
+                                    className="absolute bottom-2 right-2 p-2 bg-white border border-gray-200 text-gray-400 hover:text-red-600 hover:border-red-200 transition-colors z-50 hover:bg-red-50 rounded-full cursor-pointer shadow-sm"
+                                    title="削除"
+                                >
+                                    <Trash2 size={18} className="pointer-events-none" />
+                                </button>
                             </div>
                         ))}
                     </div>
@@ -344,93 +857,392 @@
             );
         };
 
+        // ==========================================
+        // Component: ShiftView
+        // ==========================================
+        const CLOSED_SHIFT_ID = '__CLOSED__';
+
         const ShiftView = ({ data, setData }) => {
             const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-            const [printScale, setPrintScale] = useState(1.0);
+            const [selectedShiftId, setSelectedShiftId] = useState(null);
+            const [showSettings, setShowSettings] = useState(false);
             const [showOverwriteModal, setShowOverwriteModal] = useState(false);
+            const [timeCheckStaff, setTimeCheckStaff] = useState(null);
             
-            const currentShift = data.shifts.find(s => s.date === selectedDate);
-            const timeSlots = generateTimeSlots(data.settings.openTime, data.settings.closeTime);
-            const activeRegs = data.registers.filter(r => r.isActive).sort((a,b)=>a.order-b.order);
+            const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+            const [isStaffListOpen, setIsStaffListOpen] = useState(true);
+            const [printScale, setPrintScale] = useState(1.0);
 
-            const generate = () => {
-                if(currentShift) return setShowOverwriteModal(true);
-                execGenerate();
+            useEffect(() => {
+                const s = data.shifts.find(s => s.date === selectedDate);
+                if (s && s.id !== selectedShiftId) {
+                    setSelectedShiftId(s.id);
+                }
+            }, [data.shifts, selectedDate]);
+
+            const currentShift = data.shifts.find(s => s.id === selectedShiftId) || 
+                                data.shifts.find(s => s.date === selectedDate);
+            
+            const timeSlots = generateTimeSlots(data.settings.openTime, data.settings.closeTime);
+            const activeRegisters = data.registers.filter(r => r.isActive).sort((a, b) => a.order - b.order);
+
+            const formatDateWithDay = (dateStr) => {
+                const d = new Date(dateStr);
+                const dayName = ['日','月','火','水','木','金','土'][d.getDay()];
+                const holiday = getHolidayName(d);
+                return `${dateStr} (${dayName})${holiday ? ' ' + holiday : ''}`;
             };
-            const execGenerate = () => {
-                const newS = generateShift(selectedDate, data.staff, data.registers, data.settings);
-                setData({ ...data, shifts: data.shifts.filter(s=>s.date!==selectedDate).concat(newS) });
+
+            const checkAndGenerate = () => {
+                if (!selectedDate) return;
+                const existing = data.shifts.find(s => s.date === selectedDate);
+                if (existing) {
+                    setShowOverwriteModal(true);
+                } else {
+                    performGeneration();
+                }
+            };
+
+            const performGeneration = () => {
+                const newShift = generateShift(selectedDate, data.staff, data.registers, data.settings);
+                
+                const existing = data.shifts.find(s => s.date === selectedDate);
+                const newShifts = existing 
+                    ? data.shifts.map(s => s.date === selectedDate ? newShift : s)
+                    : [...data.shifts, newShift];
+
+                setData({ ...data, shifts: newShifts });
+                setSelectedShiftId(newShift.id);
                 setShowOverwriteModal(false);
             };
-            const updateCell = (time, regId, staffId) => {
-                if(!currentShift) return;
-                const newCells = { ...currentShift.cells, [`${time}-${regId}`]: { registerId: regId, staffId: staffId==='__EMPTY__'?null:staffId, isManualOverride: true } };
-                setData({ ...data, shifts: data.shifts.map(s=>s.id===currentShift.id?{...s, cells: newCells}:s) });
-            };
-            
-            const getStaffName = (id) => { 
-                if(id==='__CLOSED__') return '閉鎖';
-                const s = data.staff.find(st=>st.id===id); 
-                return s ? s.name : ''; 
+
+            const handleManualChange = (time, regId, value) => {
+                if (!currentShift) return;
+                const key = `${time}-${regId}`;
+                const newCells = {
+                    ...currentShift.cells,
+                    [key]: {
+                        registerId: regId,
+                        staffId: value === '__EMPTY__' ? null : value,
+                        isManualOverride: true
+                    }
+                };
+                
+                const updatedShift = { ...currentShift, cells: newCells };
+                setData({
+                    ...data,
+                    shifts: data.shifts.map(s => s.id === currentShift.id ? updatedShift : s)
+                });
             };
 
+            const toggleRegisterStatus = (regId) => {
+                if (!currentShift) return;
+                const allClosed = timeSlots.every(time => currentShift.cells[`${time}-${regId}`]?.staffId === CLOSED_SHIFT_ID);
+                const newCells = { ...currentShift.cells };
+                timeSlots.forEach(time => {
+                    const key = `${time}-${regId}`;
+                    newCells[key] = { registerId: regId, staffId: allClosed ? null : CLOSED_SHIFT_ID, isManualOverride: true };
+                });
+                const updatedShift = { ...currentShift, cells: newCells };
+                setData({ ...data, shifts: data.shifts.map(s => s.id === currentShift.id ? updatedShift : s) });
+            };
+
+            const updateSettings = (key, value) => {
+                setData({ ...data, settings: { ...data.settings, [key]: value } });
+            };
+
+            const handlePrint = () => {
+                window.print();
+            };
+
+            const handleStaffOverride = (staffId, status) => {
+                if (!currentShift) return;
+                const currentOverrides = currentShift.attendanceOverrides || {};
+                const newOverrides = { ...currentOverrides, [staffId]: status };
+                let newCells = currentShift.cells;
+                if (status === 'ABSENT') {
+                    newCells = { ...currentShift.cells };
+                    Object.keys(newCells).forEach(key => {
+                        if (newCells[key].staffId === staffId) {
+                            newCells[key] = {
+                                ...newCells[key],
+                                staffId: null,
+                                isManualOverride: true
+                            };
+                        }
+                    });
+                }
+                const updatedShift = { ...currentShift, attendanceOverrides: newOverrides, cells: newCells };
+                setData({ ...data, shifts: data.shifts.map(s => s.id === currentShift.id ? updatedShift : s) });
+            };
+
+            const getStaffStatus = (staff, dateStr, overrides = {}) => {
+                if (overrides[staff.id]) return overrides[staff.id];
+                const dayOfWeekName = getDayOfWeek(dateStr);
+                const isTodayHoliday = isHoliday(dateStr);
+                if (isTodayHoliday && staff.daysOff.includes('Holiday')) return 'ABSENT';
+                if (staff.daysOff.includes(dayOfWeekName)) return 'ABSENT';
+                return 'PRESENT';
+            };
+
+            const staffLists = useMemo(() => {
+                if (!currentShift) return { working: [], resting: [] };
+                const overrides = currentShift.attendanceOverrides || {};
+                const working = [];
+                const resting = [];
+                data.staff.forEach(s => {
+                    const status = getStaffStatus(s, currentShift.date, overrides);
+                    if (status === 'PRESENT') working.push(s); else resting.push(s);
+                });
+                return { working, resting };
+            }, [data.staff, currentShift]);
+
+            const openTimeCheck = (e, staff) => {
+                e.stopPropagation();
+                setTimeCheckStaff(staff);
+            };
+
+            const getTimeInfo = (staff) => {
+                const dayOfWeek = getDayOfWeek(selectedDate);
+                const isTodayHoliday = isHoliday(selectedDate);
+                let config = staff.baseShift;
+                let label = "基本シフト";
+                if (isTodayHoliday && staff.irregularShifts['Holiday']) {
+                    config = staff.irregularShifts['Holiday'];
+                    label = "祝日シフト";
+                } else if (staff.irregularShifts[dayOfWeek]) {
+                    config = staff.irregularShifts[dayOfWeek];
+                    label = `${DAYS_OF_WEEK.find(d => d === dayOfWeek) ? '曜日別' : ''}イレギュラー`;
+                }
+                return { config, label };
+            };
+
+            const getCellProps = (regId, timeIndex) => {
+                if (!currentShift) return { borderLeft: true, borderRight: true, label: '', isOverride: false, isClosed: false };
+                const time = timeSlots[timeIndex];
+                const cell = currentShift.cells[`${time}-${regId}`];
+                const staffId = cell?.staffId;
+                const isClosed = staffId === CLOSED_SHIFT_ID;
+                const staff = (!isClosed && staffId) ? data.staff.find(s => s.id === staffId) : null;
+                const label = isClosed ? '閉鎖' : (staff ? staff.name : '');
+                const prevTime = timeIndex > 0 ? timeSlots[timeIndex - 1] : null;
+                const prevCell = prevTime ? currentShift.cells[`${prevTime}-${regId}`] : null;
+                const isSameAsPrev = prevCell && prevCell.staffId === staffId;
+                const nextTime = timeIndex < timeSlots.length - 1 ? timeSlots[timeIndex + 1] : null;
+                const nextCell = nextTime ? currentShift.cells[`${nextTime}-${regId}`] : null;
+                const isSameAsNext = nextCell && nextCell.staffId === staffId;
+                return { borderLeft: !isSameAsPrev, borderRight: !isSameAsNext, label, isOverride: cell?.isManualOverride, isClosed };
+            };
+
+            const sortedHistory = useMemo(() => {
+                return [...data.shifts].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+            }, [data.shifts]);
+
             return (
-                <div className="space-y-4">
-                    {showOverwriteModal && <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center"><div className="bg-white p-6 rounded shadow-lg"><p className="mb-4">既にシフトが存在します。上書きしますか？</p><div className="flex justify-end gap-2"><button onClick={()=>setShowOverwriteModal(false)} className="px-4 py-2 bg-gray-200 rounded">キャンセル</button><button onClick={execGenerate} className="px-4 py-2 bg-blue-600 text-white rounded">上書き作成</button></div></div></div>}
-                    
-                    <div className="bg-white p-4 rounded shadow border no-print">
-                        <div className="flex flex-wrap gap-4 items-center justify-between">
-                            <div className="flex items-center gap-2"><input type="date" value={selectedDate} onChange={e=>setSelectedDate(e.target.value)} className="border p-2 rounded" /><button onClick={generate} className="bg-blue-600 text-white px-4 py-2 rounded flex items-center gap-2"><RefreshCw size={16}/> 作成</button></div>
-                            <div className="flex items-center gap-2"><span className="text-xs font-bold">印刷倍率:</span><input type="range" min="0.5" max="1.0" step="0.05" value={printScale} onChange={e=>setPrintScale(Number(e.target.value))} className="w-24" /><button onClick={()=>window.print()} className="bg-gray-800 text-white px-4 py-2 rounded flex items-center gap-2"><Printer size={16}/> 印刷</button></div>
+                <div className="space-y-6">
+                    <style>{`
+                    @media print {
+                        @page { size: landscape; margin: 3mm; }
+                        body { visibility: hidden; background: white !important; }
+                        button, nav, header { display: none !important; }
+                        body > *:not(#root) { display: none !important; }
+                        .shift-table-container { 
+                            visibility: visible !important; 
+                            position: fixed !important; 
+                            top: 0 !important; 
+                            left: 0 !important; 
+                            width: 100vw !important; 
+                            min-height: 100vh !important; 
+                            background: white !important; 
+                            z-index: 2147483647 !important; 
+                            margin: 0 !important; 
+                            padding: 5mm !important; 
+                            display: block !important; 
+                            overflow: visible !important; 
+                            zoom: var(--print-scale, 1); 
+                        }
+                        .shift-table-container * { visibility: visible !important; }
+                        .no-print { display: none !important; }
+                        .print-only { display: block !important; }
+                        .print-table-row { display: table-row-group !important; }
+                        .screen-table-row { display: none !important; }
+                        .print-area { width: 100%; border-collapse: collapse; font-size: 10px; table-layout: fixed; }
+                        .print-area th, .print-area td { border: 1px solid #444 !important; text-align: center; height: auto !important; vertical-align: middle; padding: 2px !important; white-space: nowrap; position: static !important; }
+                        .print-area th { background-color: #dbeafe !important; color: #1e3a8a !important; font-weight: 800 !important; height: 30px !important; font-size: 11px !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+                        .print-header { font-size: 18px; font-weight: bold; margin-bottom: 12px; text-align: center; padding-top: 10px; }
+                        thead { display: table-header-group; } tbody { display: table-row-group; } tr { break-inside: avoid; page-break-inside: avoid; }
+                    }
+                    `}</style>
+
+                    {showOverwriteModal && (
+                        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center no-print">
+                            <div className="bg-white rounded-lg p-6 max-w-sm w-full shadow-xl">
+                                <div className="flex items-center gap-2 text-yellow-600 mb-4"><AlertCircle size={24} /><h3 className="font-bold text-lg">確認</h3></div>
+                                <p className="text-gray-700 mb-6">{formatDateWithDay(selectedDate)} のシフトは既に存在します。<br />再作成して上書きしますか？<br /><span className="text-xs text-red-500 mt-2 block">※手動で行った変更は失われます。</span></p>
+                                <div className="flex justify-end gap-3"><button onClick={() => setShowOverwriteModal(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded">キャンセル</button><button onClick={performGeneration} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">上書き作成</button></div>
+                            </div>
                         </div>
+                    )}
+
+                    {timeCheckStaff && (
+                        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 no-print" onClick={() => setTimeCheckStaff(null)}>
+                            <div className="bg-white rounded-lg p-6 max-w-sm w-full shadow-xl relative animate-fadeIn" onClick={e => e.stopPropagation()}>
+                                <button onClick={() => setTimeCheckStaff(null)} className="absolute top-3 right-3 text-gray-400 hover:text-gray-600"><XCircle size={24} /></button>
+                                <h3 className="font-bold text-lg text-gray-800 mb-4 flex items-center gap-2"><Clock size={20} className="text-blue-600" />勤務時間確認</h3>
+                                {(() => {
+                                    const { config, label } = getTimeInfo(timeCheckStaff);
+                                    return (
+                                        <div className="space-y-4">
+                                            <div className="border-b pb-2"><p className="text-sm text-gray-500 mb-1">スタッフ名</p><p className="font-bold text-lg">{timeCheckStaff.name}</p></div>
+                                            <div className="bg-gray-50 p-3 rounded">
+                                                <div className="flex justify-between items-center mb-2"><span className="text-xs font-bold text-gray-500 uppercase">適用設定</span><span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">{label}</span></div>
+                                                <div className="space-y-2 text-sm">
+                                                    <div className="flex justify-between"><span className="text-gray-600">勤務時間:</span><span className="font-mono font-bold">{config.start} ~ {config.end}</span></div>
+                                                    <div className="flex justify-between"><span className="text-gray-600">休憩時間:</span><span className="font-mono">{config.breakStart ? `${config.breakStart} ~ ${config.breakEnd}` : 'なし'}</span></div>
+                                                    <div className="flex justify-between"><span className="text-gray-600">除外時間:</span><span className="font-mono text-red-600">{config.exclusionStart ? `${config.exclusionStart} ~ ${config.exclusionEnd}` : 'なし'}</span></div>
+                                                </div>
+                                            </div>
+                                            <p className="text-xs text-gray-400 text-center mt-4">{selectedDate} ({getDayOfWeek(selectedDate)})</p>
+                                        </div>
+                                    );
+                                })()}
+                                <div className="mt-6"><button onClick={() => setTimeCheckStaff(null)} className="w-full py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded font-medium">閉じる</button></div>
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 no-print">
+                        <div className="mb-6 border-b pb-4">
+                            <button onClick={() => setIsHistoryOpen(!isHistoryOpen)} className="flex items-center gap-2 text-gray-600 font-bold hover:text-blue-600 transition-colors w-full"><History size={18} /><span>作成済みシフト履歴 ({sortedHistory.length})</span>{isHistoryOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}</button>
+                            {isHistoryOpen && (
+                                <div className="mt-3 flex flex-wrap gap-2 animate-fadeIn">
+                                    {sortedHistory.length === 0 && <span className="text-sm text-gray-400">履歴なし</span>}
+                                    {sortedHistory.map(s => (<button key={s.id} onClick={() => setSelectedDate(s.date)} className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${selectedDate === s.date ? 'bg-blue-100 text-blue-800 border-blue-300 font-bold' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}>{formatDateWithDay(s.date)}</button>))}
+                                </div>
+                            )}
+                        </div>
+                        <div className="flex flex-wrap justify-between items-start gap-4">
+                            <div className="space-y-2">
+                                <label className="block text-sm font-medium text-gray-700">対象日付</label>
+                                <div className="flex gap-2 items-center"><input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} className="border rounded p-2 focus:ring-2 focus:ring-blue-500" /><span className="text-sm font-bold text-gray-700 ml-2">{formatDateWithDay(selectedDate)}</span></div>
+                            </div>
+                            <div className="flex gap-4">
+                                <div className={`flex items-center gap-2 p-3 rounded border ${showSettings ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200'}`}>
+                                    <button onClick={() => setShowSettings(!showSettings)} className="flex items-center gap-2 text-sm font-medium text-gray-700"><Settings size={16} /> 営業時間設定</button>
+                                    {showSettings && (
+                                        <div className="flex gap-2 items-center ml-2 border-l pl-2 border-gray-300"><Clock size={14} className="text-gray-500" /><input type="time" value={data.settings.openTime} onChange={e => updateSettings('openTime', e.target.value)} className="border rounded px-1 py-0.5 text-sm" /><span>~</span><input type="time" value={data.settings.closeTime} onChange={e => updateSettings('closeTime', e.target.value)} className="border rounded px-1 py-0.5 text-sm" /></div>
+                                    )}
+                                </div>
+                                <button onClick={checkAndGenerate} className="bg-blue-600 text-white px-6 py-3 rounded shadow hover:bg-blue-700 flex items-center gap-2 font-bold transition-colors"><RefreshCw size={20} /> シフト作成</button>
+                            </div>
+                        </div>
+
+                        {currentShift && (
+                            <div className="mt-6 border-t pt-4">
+                                <button onClick={() => setIsStaffListOpen(!isStaffListOpen)} className="flex items-center gap-2 w-full text-left font-bold text-gray-700 mb-3 hover:text-blue-600"><UserCheck size={18} /> <span>スタッフ出勤管理</span>{isStaffListOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}</button>
+                                {isStaffListOpen && (
+                                    <div className="flex flex-col md:flex-row gap-4 animate-fadeIn">
+                                        <div className="flex-1 border rounded-lg overflow-hidden flex flex-col">
+                                            <div className="bg-blue-50 p-2 border-b text-sm font-bold text-blue-800 flex justify-between items-center"><span>出勤スタッフ ({staffLists.working.length})</span><UserCheck size={14} /></div>
+                                            <div className="p-3 bg-white min-h-[60px] max-h-[200px] overflow-y-auto">
+                                                <div className="flex flex-wrap gap-2">
+                                                    {staffLists.working.map(s => (
+                                                        <div key={s.id} onClick={() => handleStaffOverride(s.id, 'ABSENT')} className="group flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium cursor-pointer transition-all bg-blue-50 text-blue-700 border border-blue-200 shadow-sm hover:bg-red-50 hover:text-red-600 hover:border-red-200">
+                                                            <button onClick={(e) => openTimeCheck(e, s)} className="text-blue-400 hover:text-blue-600 p-0.5 rounded-full hover:bg-blue-100" title="勤務時間を確認"><Clock size={12} /></button>
+                                                            <span>{s.name}</span><ArrowLeftRight size={12} className="opacity-0 group-hover:opacity-100 transition-opacity ml-1" />
+                                                        </div>
+                                                    ))}
+                                                    {staffLists.working.length === 0 && <span className="text-gray-400 text-sm">なし</span>}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="flex-1 border rounded-lg overflow-hidden flex flex-col">
+                                            <div className="bg-gray-100 p-2 border-b text-sm font-bold text-gray-600 flex justify-between items-center"><span>休みスタッフ ({staffLists.resting.length})</span><UserX size={14} /></div>
+                                            <div className="p-3 bg-gray-50 min-h-[60px] max-h-[200px] overflow-y-auto">
+                                                <div className="flex flex-wrap gap-2">
+                                                    {staffLists.resting.map(s => (
+                                                        <div key={s.id} onClick={() => handleStaffOverride(s.id, 'PRESENT')} className="group flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium cursor-pointer transition-all bg-white text-gray-500 border border-gray-300 shadow-sm grayscale hover:grayscale-0 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-300">
+                                                            <ArrowLeftRight size={12} className="opacity-0 group-hover:opacity-100 transition-opacity mr-1" /><span>{s.name}</span>
+                                                            <button onClick={(e) => openTimeCheck(e, s)} className="text-gray-400 hover:text-blue-600 p-0.5 rounded-full hover:bg-blue-100 ml-1" title="設定時間を確認"><Clock size={12} /></button>
+                                                        </div>
+                                                    ))}
+                                                    {staffLists.resting.length === 0 && <span className="text-gray-400 text-sm">なし</span>}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {currentShift && (
+                            <div className="mt-4 pt-4 border-t flex flex-col sm:flex-row justify-end items-end sm:items-center gap-4">
+                                <div className="flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded border border-gray-200"><span className="text-xs font-bold text-gray-600">印刷倍率:</span><input type="range" min="0.3" max="1.0" step="0.05" value={printScale} onChange={(e) => setPrintScale(Number(e.target.value))} className="w-24 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-gray-600" /><span className="text-xs w-8 text-right font-mono">{Math.round(printScale * 100)}%</span></div>
+                                <button onClick={handlePrint} className="bg-gray-800 text-white px-5 py-2 rounded hover:bg-gray-900 flex items-center gap-2 shadow-sm"><Printer size={18} /> 印刷 / PDF保存</button>
+                            </div>
+                        )}
                     </div>
 
                     {currentShift ? (
-                        <div className="bg-white rounded border overflow-hidden shift-table-container" style={{'--print-scale':printScale}}>
-                            <div className="hidden print-only print-header">{selectedDate} ({getDayOfWeek(selectedDate)}) シフト表</div>
+                        <div className="bg-white rounded-lg shadow border border-gray-200 overflow-hidden shift-table-container" style={{ '--print-scale': printScale }}>
+                            <div className="hidden print-only print-header">{formatDateWithDay(currentShift.date)} シフト表</div>
                             <div className="overflow-x-auto">
                                 <table className="w-full text-xs text-center border-collapse print-area">
-                                    <colgroup><col style={{width:'80px'}}/>{timeSlots.map(t=><col key={t} style={{width:'auto'}}/>)}</colgroup>
-                                    <thead><tr><th className="p-2 border bg-blue-50 font-bold sticky left-0 z-10 print:static">号車</th>{timeSlots.map(t=><th key={t} className="p-1 border bg-gray-50">{t}</th>)}</tr></thead>
+                                    <colgroup><col className="w-24" style={{ width: '15%' }} />{timeSlots.map(t => (<col key={t} className="min-w-[40px]" style={{ width: `calc(85% / ${timeSlots.length})` }} />))}</colgroup>
+                                    <thead><tr><th className="p-2 border bg-blue-50 text-blue-900 font-bold sticky left-0 z-10 print:static">号車 / 時間</th>{timeSlots.map(time => (<th key={time} className="p-1 border bg-gray-50 font-mono print:static">{time}</th>))}</tr></thead>
                                     <tbody className="screen-table-row">
-                                        {activeRegs.map(r=>(
-                                            <tr key={r.id}>
-                                                <td className="p-2 border font-bold sticky left-0 bg-white z-10 text-left pl-2 print:static">{r.name}</td>
-                                                {timeSlots.map(t=>{
-                                                    const cell = currentShift.cells[`${t}-${r.id}`];
-                                                    const name = getStaffName(cell?.staffId);
-                                                    return (
-                                                        <td key={t} className={`p-0 border relative h-8 ${cell?.isManualOverride?'bg-yellow-50':''} ${cell?.staffId==='__CLOSED__'?'bg-gray-300':''}`}>
-                                                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none px-1"><span className="truncate">{name.slice(0,5)}</span></div>
-                                                            <select className="absolute inset-0 opacity-0 cursor-pointer" value={cell?.staffId||'__EMPTY__'} onChange={e=>updateCell(t,r.id,e.target.value)}>
-                                                                <option value="__EMPTY__">空き</option><option value="__CLOSED__">閉鎖</option>
-                                                                {data.staff.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
-                                                            </select>
-                                                        </td>
-                                                    );
-                                                })}
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                    {/* Print Optimized Body */}
-                                    <tbody className="hidden print-table-row">
-                                        {activeRegs.map(r=>{
-                                            const merged = [];
-                                            let cur = null;
-                                            timeSlots.forEach((t, i)=>{
-                                                const cell = currentShift.cells[`${t}-${r.id}`];
-                                                const sid = cell?.staffId;
-                                                if(i===0) cur = {sid, len:1};
-                                                else {
-                                                    if(sid === cur.sid) cur.len++;
-                                                    else { merged.push(cur); cur = {sid, len:1}; }
-                                                }
-                                            });
-                                            merged.push(cur);
+                                        {activeRegisters.map(reg => {
+                                            const isFullyClosed = timeSlots.every(t => currentShift?.cells[`${t}-${reg.id}`]?.staffId === CLOSED_SHIFT_ID);
                                             return (
-                                                <tr key={r.id}>
-                                                    <td className="border font-bold text-center">{r.name}</td>
-                                                    {merged.map((m,i)=>(<td key={i} colSpan={m.len} className={`border ${m.sid==='__CLOSED__'?'bg-gray-300':''}`}>{getStaffName(m.sid).slice(0,6)}</td>))}
+                                                <tr key={reg.id} className="hover:bg-gray-50">
+                                                    <td className="p-2 border font-bold bg-white sticky left-0 z-10 text-left pl-3 print:static">
+                                                        <div className="flex justify-between items-center">
+                                                            <span>{reg.name}</span>
+                                                            <button onClick={() => toggleRegisterStatus(reg.id)} className={`p-1 rounded transition-colors ${isFullyClosed ? 'text-red-600 bg-red-50' : 'text-gray-300 hover:text-red-400 hover:bg-gray-50'}`} title={isFullyClosed ? "閉鎖を解除" : "全時間帯を閉鎖"}><Ban size={16} /></button>
+                                                        </div>
+                                                    </td>
+                                                    {timeSlots.map((time, idx) => {
+                                                        const { borderLeft, borderRight, label, isOverride, isClosed } = getCellProps(reg.id, idx);
+                                                        return (
+                                                            <td key={time} className={`p-0 h-10 relative border-t border-b border-gray-300 ${borderLeft ? 'border-l border-l-gray-300' : 'border-l-0'} ${borderRight ? 'border-r border-r-gray-300' : 'border-r-0'} ${isOverride ? 'bg-yellow-50' : ''} ${isClosed ? 'bg-gray-400 bg-[linear-gradient(45deg,#00000022_25%,transparent_25%,transparent_50%,#00000022_50%,#00000022_75%,transparent_75%,transparent)] bg-[length:10px_10px]' : ''} cursor-pointer`}>
+                                                                <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20 px-0.5"><span className={`font-medium text-[10px] leading-tight overflow-hidden whitespace-nowrap ${isClosed ? 'text-white font-bold' : 'text-gray-800'}`}>{label.slice(0, 5)}</span></div>
+                                                                <select className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-30 appearance-none bg-transparent" value={currentShift.cells[`${time}-${reg.id}`]?.staffId || '__EMPTY__'} onChange={(e) => handleManualChange(time, reg.id, e.target.value)} title={label || '空き'}>
+                                                                    <option value="__EMPTY__">-- 空き --</option><option value={CLOSED_SHIFT_ID}>⛔ 閉鎖 (Close)</option>
+                                                                    <optgroup label="出勤スタッフ">{staffLists.working.map(s => (<option key={s.id} value={s.id}>{s.name}</option>))}</optgroup>
+                                                                </select>
+                                                            </td>
+                                                        );
+                                                    })}
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                    <tbody className="hidden print-table-row">
+                                        {activeRegisters.map(reg => {
+                                            const mergedCells = [];
+                                            let currentSpan = 0;
+                                            let currentStaffId = null;
+                                            let currentIsOverride = false;
+                                            for (let i = 0; i < timeSlots.length; i++) {
+                                                const time = timeSlots[i];
+                                                const cellKey = `${time}-${reg.id}`;
+                                                const cell = currentShift.cells[cellKey];
+                                                const sId = cell?.staffId || null;
+                                                if (i === 0) { currentStaffId = sId; currentIsOverride = cell?.isManualOverride || false; currentSpan = 1; }
+                                                else {
+                                                    if (sId === currentStaffId) { currentSpan++; if (cell?.isManualOverride) currentIsOverride = true; }
+                                                    else { mergedCells.push({ staffId: currentStaffId, span: currentSpan, isOverride: currentIsOverride }); currentStaffId = sId; currentSpan = 1; currentIsOverride = cell?.isManualOverride || false; }
+                                                }
+                                            }
+                                            mergedCells.push({ staffId: currentStaffId, span: currentSpan, isOverride: currentIsOverride });
+                                            return (
+                                                <tr key={reg.id}>
+                                                    <td className="p-2 border font-bold text-center align-middle">{reg.name}</td>
+                                                    {mergedCells.map((cell, idx) => {
+                                                        const isClosed = cell.staffId === CLOSED_SHIFT_ID;
+                                                        const staff = (!isClosed && cell.staffId) ? data.staff.find(s => s.id === cell.staffId) : null;
+                                                        return (<td key={idx} colSpan={cell.span} className={`border p-1 align-middle ${cell.isOverride ? 'bg-gray-100' : ''} ${isClosed ? 'bg-gray-300' : ''}`}><span className="font-medium text-gray-800 text-sm block">{isClosed ? '閉鎖' : (staff ? (staff.name.length > 5 ? staff.name.slice(0, 5) : staff.name) : '')}</span></td>);
+                                                    })}
                                                 </tr>
                                             );
                                         })}
@@ -438,121 +1250,34 @@
                                 </table>
                             </div>
                         </div>
-                    ) : <div className="p-10 text-center text-gray-400 no-print">シフトが作成されていません</div>}
+                    ) : (
+                        <div className="text-center py-20 text-gray-500 bg-white rounded-lg border border-dashed border-gray-300 no-print">
+                            <RefreshCw className="mx-auto mb-4 text-gray-300" size={48} /><p>この日のシフトはまだ作成されていません。</p><p className="text-sm">日付を選択して「シフト作成」ボタンを押してください。</p>
+                        </div>
+                    )}
                 </div>
             );
         };
 
         // ==========================================
-        // Data Management Component (File System Access API)
-        // ==========================================
-        const DataView = ({ data, setData }) => {
-            const [fileHandle, setFileHandle] = useState(null);
-            const [fileName, setFileName] = useState("");
-
-            // 1. Open File
-            const handleOpenFile = async () => {
-                if (!window.showOpenFilePicker) { alert("このブラウザはファイル操作に対応していません。\nChromeまたはEdgeを使用してください。"); return; }
-                try {
-                    const [handle] = await window.showOpenFilePicker({ types: [{ description: 'JSON File', accept: { 'application/json': ['.json'] } }] });
-                    const file = await handle.getFile();
-                    const text = await file.text();
-                    const json = JSON.parse(text);
-                    if(!json.staff || !json.registers) throw new Error("無効なデータ形式です");
-                    
-                    setData(json);
-                    setFileHandle(handle);
-                    setFileName(file.name);
-                    alert(`「${file.name}」を読み込みました。`);
-                } catch (err) {
-                    if(err.name !== 'AbortError') { console.error(err); alert("ファイルの読み込みに失敗しました。"); }
-                }
-            };
-
-            // 2. Save (Overwrite)
-            const handleSave = async () => {
-                if (!fileHandle) return handleSaveAs();
-                try {
-                    const writable = await fileHandle.createWritable();
-                    await writable.write(JSON.stringify(data, null, 2));
-                    await writable.close();
-                    alert(`「${fileName}」に上書き保存しました。`);
-                } catch (err) {
-                    console.error(err);
-                    alert("保存に失敗しました。\n「名前を付けて保存」を試してください。");
-                }
-            };
-
-            // 3. Save As
-            const handleSaveAs = async () => {
-                if (!window.showSaveFilePicker) { alert("このブラウザはファイル操作に対応していません。"); return; }
-                try {
-                    const handle = await window.showSaveFilePicker({
-                        suggestedName: `regimaster_backup_${new Date().toISOString().slice(0,10)}.json`,
-                        types: [{ description: 'JSON File', accept: { 'application/json': ['.json'] } }],
-                    });
-                    const writable = await handle.createWritable();
-                    await writable.write(JSON.stringify(data, null, 2));
-                    await writable.close();
-                    
-                    const file = await handle.getFile();
-                    setFileHandle(handle);
-                    setFileName(file.name);
-                    alert(`「${file.name}」として保存しました。`);
-                } catch (err) {
-                    if(err.name !== 'AbortError') console.error(err);
-                }
-            };
-
-            const handleReset = () => {
-                if(confirm("データを初期化しますか？\n保存されていないデータは消えます。")) {
-                    setData(INITIAL_DATA);
-                    setFileHandle(null);
-                    setFileName("");
-                }
-            };
-
-            return (
-                <div className="max-w-2xl mx-auto space-y-6">
-                    <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg text-sm text-blue-800">
-                        <h4 className="font-bold flex items-center gap-2 mb-2"><AlertCircle size={16}/> データ管理について</h4>
-                        <p>このアプリはブラウザ内にデータを一時保存していますが、キャッシュクリア等で消える可能性があります。</p>
-                        <p className="mt-1 font-bold">重要なデータは必ず「ファイルに保存」してください。</p>
-                        {fileName && <div className="mt-3 bg-white p-2 rounded border text-center font-bold text-green-700">現在編集中のファイル: {fileName}</div>}
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <button onClick={handleOpenFile} className="bg-white border-2 border-gray-200 hover:border-blue-500 hover:bg-blue-50 p-6 rounded-xl flex flex-col items-center gap-3 transition-all">
-                            <FileJson size={32} className="text-gray-600"/>
-                            <span className="font-bold">ファイルを開く</span>
-                            <span className="text-xs text-gray-500">保存済みデータを読み込む</span>
-                        </button>
-                        <button onClick={handleSave} className="bg-blue-600 hover:bg-blue-700 text-white p-6 rounded-xl flex flex-col items-center gap-3 shadow-lg transition-all">
-                            <Save size={32}/>
-                            <span className="font-bold">上書き保存</span>
-                            <span className="text-xs text-blue-200">{fileName ? fileName : '新規ファイル作成'}</span>
-                        </button>
-                        <button onClick={handleSaveAs} className="bg-white border-2 border-gray-200 hover:border-green-500 hover:bg-green-50 p-6 rounded-xl flex flex-col items-center gap-3 transition-all">
-                            <Download size={32} className="text-gray-600"/>
-                            <span className="font-bold">名前を付けて保存</span>
-                            <span className="text-xs text-gray-500">別ファイルとして保存</span>
-                        </button>
-                    </div>
-
-                    <div className="pt-8 border-t">
-                        <button onClick={handleReset} className="text-red-500 text-sm flex items-center gap-2 hover:underline"><Trash2 size={14}/> 全データを初期化する</button>
-                    </div>
-                </div>
-            );
-        };
-
-        // ==========================================
-        // App Core
+        // App.tsx
         // ==========================================
         const TABS = { SHIFT: 'shift', STAFF: 'staff', REGISTER: 'register', DATA: 'data' };
+
+        const generateDefaultRegisters = () => {
+            const regs = [];
+            for (let i = 1; i <= 20; i++) {
+                regs.push({ id: `reg-${i}`, name: `${i}号`, isActive: i <= 5, order: i, isBadgeRole: false });
+            }
+            regs.push({ id: 'reg-cart', name: 'カート回収', isActive: false, order: 21, isBadgeRole: true });
+            regs.push({ id: 'reg-kind', name: '親切係', isActive: false, order: 22, isBadgeRole: true });
+            regs.push({ id: 'reg-counter', name: 'カウンター', isActive: false, order: 23, isBadgeRole: true });
+            return regs;
+        };
+
         const INITIAL_DATA = {
             staff: [],
-            registers: Array.from({length:20},(_,i)=>({id:`reg-${i+1}`,name:`${i+1}号`,isActive:i<5,order:i+1,isBadgeRole:false})),
+            registers: generateDefaultRegisters(),
             shifts: [],
             settings: { openTime: DEFAULT_OPEN_TIME, closeTime: DEFAULT_CLOSE_TIME }
         };
@@ -561,10 +1286,22 @@
             const [activeTab, setActiveTab] = useState(TABS.SHIFT);
             const [data, setData] = useState(INITIAL_DATA);
             const [isLoaded, setIsLoaded] = useState(false);
+            
+            // New State for File Handle
+            const [fileHandle, setFileHandle] = useState(null);
+            const [fileName, setFileName] = useState("");
 
             useEffect(() => {
                 const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
-                if (saved) { try { setData(JSON.parse(saved)); } catch (e) { console.error(e); } }
+                if (saved) {
+                    try {
+                        const parsed = JSON.parse(saved);
+                        if (!parsed.settings) parsed.settings = { openTime: DEFAULT_OPEN_TIME, closeTime: DEFAULT_CLOSE_TIME };
+                        if (parsed.staff) parsed.staff = parsed.staff.map(s => ({ ...s, badges: s.badges || [] }));
+                        if (parsed.registers) parsed.registers = parsed.registers.map(r => ({ ...r, isBadgeRole: r.isBadgeRole !== undefined ? r.isBadgeRole : (!!r.requiredBadge || false), requiredBadge: undefined }));
+                        setData(parsed);
+                    } catch (e) { console.error("Failed to load data", e); }
+                }
                 setIsLoaded(true);
             }, []);
 
@@ -572,35 +1309,187 @@
                 if (isLoaded) localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data));
             }, [data, isLoaded]);
 
+            // File System Access API Functions
+            const handleOpenFile = async () => {
+                if (!window.showOpenFilePicker) {
+                    alert("このブラウザはファイルシステム操作に対応していません。\nChromeまたはEdgeを使用してください。");
+                    return;
+                }
+                try {
+                    const [handle] = await window.showOpenFilePicker({
+                        types: [{ description: 'JSON File', accept: { 'application/json': ['.json'] } }],
+                    });
+                    const file = await handle.getFile();
+                    const text = await file.text();
+                    const json = JSON.parse(text);
+                    
+                    // Simple validation
+                    if (!json.staff || !json.registers) {
+                        alert("無効なファイル形式です。");
+                        return;
+                    }
+
+                    if (confirm(`「${file.name}」を読み込みますか？\n現在の未保存データは上書きされます。`)) {
+                        setData(json);
+                        setFileHandle(handle);
+                        setFileName(file.name);
+                        alert("読み込みが完了しました。");
+                    }
+                } catch (err) {
+                    if (err.name !== 'AbortError') {
+                        console.error(err);
+                        alert("ファイルの読み込みに失敗しました。");
+                    }
+                }
+            };
+
+            const handleSave = async () => {
+                if (!fileHandle) {
+                    return handleSaveAs();
+                }
+                try {
+                    const writable = await fileHandle.createWritable();
+                    await writable.write(JSON.stringify(data, null, 2));
+                    await writable.close();
+                    alert(`「${fileName}」に上書き保存しました。`);
+                } catch (err) {
+                    console.error(err);
+                    alert("保存に失敗しました。アクセス権限がない可能性があります。");
+                }
+            };
+
+            const handleSaveAs = async () => {
+                if (!window.showSaveFilePicker) {
+                    alert("このブラウザはファイルシステム操作に対応していません。");
+                    return;
+                }
+                try {
+                    const handle = await window.showSaveFilePicker({
+                        suggestedName: `regimaster_backup_${new Date().toISOString().split('T')[0]}.json`,
+                        types: [{ description: 'JSON File', accept: { 'application/json': ['.json'] } }],
+                    });
+                    const writable = await handle.createWritable();
+                    await writable.write(JSON.stringify(data, null, 2));
+                    await writable.close();
+                    
+                    setFileHandle(handle);
+                    const file = await handle.getFile();
+                    setFileName(file.name);
+                    alert(`「${file.name}」として保存しました。`);
+                } catch (err) {
+                    if (err.name !== 'AbortError') console.error(err);
+                }
+            };
+
+            const handleBackup = () => {
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `regimaster_backup_${new Date().toISOString().split('T')[0]}.json`;
+                a.click();
+            };
+
+            const handleRestore = (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    try {
+                        const parsed = JSON.parse(ev.target?.result);
+                        if (parsed.staff && parsed.registers && parsed.shifts) {
+                            if (confirm('現在のデータを上書きして復元しますか？この操作は取り消せません。')) {
+                                if (!parsed.settings) parsed.settings = { openTime: DEFAULT_OPEN_TIME, closeTime: DEFAULT_CLOSE_TIME };
+                                parsed.staff = parsed.staff.map(s => ({ ...s, badges: s.badges || [] }));
+                                parsed.registers = parsed.registers.map(r => ({ ...r, isBadgeRole: r.isBadgeRole !== undefined ? r.isBadgeRole : false, requiredBadge: undefined }));
+                                setData(parsed);
+                                alert('復元が完了しました。');
+                            }
+                        } else { alert('無効なバックアップファイルです。'); }
+                    } catch (err) { alert('ファイルの読み込みに失敗しました。'); }
+                };
+                reader.readAsText(file);
+            };
+
+            const handleReset = () => {
+                if (confirm('すべてのデータを消去し、初期状態（レジ1〜20号など）に戻しますか？\nこの操作は元に戻せません。')) {
+                    setData(INITIAL_DATA);
+                    setFileHandle(null);
+                    setFileName("");
+                    alert('初期化しました。');
+                }
+            };
+
+            const availableBadges = data.registers.filter(r => r.isBadgeRole).map(r => r.name).sort();
+
             if (!isLoaded) return <div className="flex h-screen items-center justify-center text-gray-500">Loading...</div>;
 
             return (
                 <div className="min-h-screen bg-gray-50 text-gray-800 font-sans">
-                    <header className="bg-white border-b sticky top-0 z-50 no-print">
-                        <div className="max-w-7xl mx-auto px-4 h-14 flex justify-between items-center">
-                            <h1 className="text-lg font-bold text-blue-600 flex items-center gap-2"><CalendarRange className="text-blue-600"/> RegiMaster Pro</h1>
-                            <nav className="flex gap-1">
-                                <TabButton active={activeTab===TABS.SHIFT} onClick={()=>setActiveTab(TABS.SHIFT)} icon={<CalendarRange size={18}/>} label="シフト作成" />
-                                <TabButton active={activeTab===TABS.STAFF} onClick={()=>setActiveTab(TABS.STAFF)} icon={<Users size={18}/>} label="スタッフ" />
-                                <TabButton active={activeTab===TABS.REGISTER} onClick={()=>setActiveTab(TABS.REGISTER)} icon={<Monitor size={18}/>} label="レジ設定" />
-                                <TabButton active={activeTab===TABS.DATA} onClick={()=>setActiveTab(TABS.DATA)} icon={<Database size={18}/>} label="データ" />
-                            </nav>
+                    <header className="bg-white border-b border-gray-200 sticky top-0 z-50 no-print">
+                        <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
+                            <div className="flex justify-between items-center h-16">
+                                <div className="flex items-center gap-2"><div className="bg-blue-600 text-white p-2 rounded-lg hidden sm:block"><CalendarRange size={24} /></div><h1 className="text-lg sm:text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 truncate">RegiMaster Pro</h1></div>
+                                <nav className="flex space-x-1 sm:space-x-2">
+                                    <TabButton active={activeTab === TABS.SHIFT} onClick={() => setActiveTab(TABS.SHIFT)} icon={<CalendarRange size={20} />} label="シフト作成" />
+                                    <TabButton active={activeTab === TABS.STAFF} onClick={() => setActiveTab(TABS.STAFF)} icon={<Users size={20} />} label="スタッフ" />
+                                    <TabButton active={activeTab === TABS.REGISTER} onClick={() => setActiveTab(TABS.REGISTER)} icon={<Monitor size={20} />} label="レジ設定" />
+                                    <TabButton active={activeTab === TABS.DATA} onClick={() => setActiveTab(TABS.DATA)} icon={<Database size={20} />} label="データ" />
+                                </nav>
+                            </div>
                         </div>
                     </header>
-                    <main className="max-w-7xl mx-auto px-4 py-6">
+                    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                         {activeTab === TABS.SHIFT && <ShiftView data={data} setData={setData} />}
-                        {activeTab === TABS.STAFF && <StaffView staffList={data.staff} setStaffList={(staff) => setData({ ...data, staff })} availableBadges={data.registers.filter(r=>r.isBadgeRole).map(r=>r.name)} />}
+                        {activeTab === TABS.STAFF && <StaffView staffList={data.staff} setStaffList={(staff) => setData({ ...data, staff })} availableBadges={availableBadges} />}
                         {activeTab === TABS.REGISTER && <RegisterView registers={data.registers} setRegisters={(registers) => setData({ ...data, registers })} />}
-                        {activeTab === TABS.DATA && <DataView data={data} setData={setData} />}
+                        {activeTab === TABS.DATA && (
+                            <div className="max-w-2xl mx-auto space-y-8">
+                                {/* New File System Section */}
+                                <div className="bg-white p-6 rounded-lg shadow border border-blue-200">
+                                    <h2 className="text-lg font-bold mb-2 flex items-center gap-2 text-blue-800"><Save size={20} /> PCファイル操作 (推奨)</h2>
+                                    <p className="text-sm text-gray-600 mb-4">PC内のファイルを直接開いたり、上書き保存したりできます (Chrome/Edgeのみ)。</p>
+                                    
+                                    {fileName && (
+                                        <div className="bg-blue-50 border border-blue-100 text-blue-700 px-4 py-2 rounded mb-4 text-sm font-bold flex items-center gap-2">
+                                            <FileJson size={16} /> 現在編集中のファイル: {fileName}
+                                        </div>
+                                    )}
+
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                        <button onClick={handleOpenFile} className="flex flex-col items-center justify-center gap-2 p-4 bg-white border-2 border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-all">
+                                            <FolderOpen size={24} className="text-gray-600"/>
+                                            <span className="font-bold text-sm">ファイルを開く</span>
+                                        </button>
+                                        <button onClick={handleSave} className="flex flex-col items-center justify-center gap-2 p-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-md transition-all">
+                                            <Save size={24}/>
+                                            <span className="font-bold text-sm">上書き保存</span>
+                                        </button>
+                                        <button onClick={handleSaveAs} className="flex flex-col items-center justify-center gap-2 p-4 bg-white border-2 border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-all">
+                                            <Download size={24} className="text-gray-600"/>
+                                            <span className="font-bold text-sm">名前を付けて保存</span>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Original Sections */}
+                                <div className="bg-white p-6 rounded-lg shadow border"><h2 className="text-lg font-bold mb-4 flex items-center gap-2"><Download size={20} /> 旧バックアップ (ダウンロード)</h2><p className="text-sm text-gray-600 mb-4">現在のデータをJSONファイルとしてダウンロードします（上書きはされません）。</p><button onClick={handleBackup} className="bg-gray-600 text-white px-6 py-2 rounded hover:bg-gray-700 text-sm">バックアップをダウンロード</button></div>
+                                <div className="bg-white p-6 rounded-lg shadow border"><h2 className="text-lg font-bold mb-4 flex items-center gap-2"><History size={20} /> 旧復元 (ファイル選択)</h2><p className="text-sm text-gray-600 mb-4">バックアップファイルを選択してデータを復元します。</p><input type="file" accept=".json" onChange={handleRestore} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" /></div>
+                                <div className="bg-red-50 p-6 rounded-lg shadow border border-red-100"><h2 className="text-lg font-bold mb-4 flex items-center gap-2 text-red-700"><Trash2Icon size={20} /> データ初期化</h2><p className="text-sm text-red-600 mb-4">アプリのすべてのデータを消去し、初期状態（レジ1〜20号など）に戻します。</p><button onClick={handleReset} className="bg-red-600 text-white px-6 py-2 rounded hover:bg-red-700 border border-red-700">データを初期化する</button></div>
+                            </div>
+                        )}
                     </main>
                 </div>
             );
         }
 
+        const Trash2Icon = ({ size }) => (<svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /><line x1="10" x2="10" y1="11" y2="17" /><line x1="14" x2="14" y1="11" y2="17" /></svg>);
+        
+        // TabButton: フォントサイズを小さくし、改行を禁止
         const TabButton = ({ active, onClick, icon, label }) => (
-            <button onClick={onClick} className={`flex flex-col items-center justify-center w-16 py-1 rounded transition-colors ${active ? 'text-blue-600 bg-blue-50' : 'text-gray-500 hover:bg-gray-100'}`}>
+            <button onClick={onClick} className={`flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 rounded-lg transition-all ${active ? 'bg-blue-50 text-blue-700 ring-1 ring-blue-200' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900'}`}>
                 {icon}
-                <span className="text-[9px] font-bold leading-none mt-0.5 whitespace-nowrap">{label}</span>
+                <span className="text-[9px] font-bold leading-none whitespace-nowrap">{label}</span>
             </button>
         );
 
