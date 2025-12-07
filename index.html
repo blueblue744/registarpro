@@ -1,5 +1,3 @@
---- START OF FILE index.html ---
-
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -1043,7 +1041,7 @@
                 <div className="space-y-6">
                     <style>{`
                         @media print {
-                            @page { size: A4 landscape; margin: 5mm; }
+                            @page { size: A4 landscape; margin: 3mm; }
                             body { 
                                 visibility: hidden; 
                                 background: white !important; 
@@ -1058,7 +1056,7 @@
                                 position: fixed !important; 
                                 top: 0 !important; 
                                 left: 0 !important; 
-                                width: 100% !important; /* 幅を100%に */
+                                width: 100% !important; 
                                 height: 100% !important;
                                 background: white !important; 
                                 z-index: 2147483647 !important; 
@@ -1066,8 +1064,6 @@
                                 padding: 0 !important; 
                                 display: block !important; 
                                 overflow: visible !important; 
-                                
-                                /* 拡大縮小制御 */
                                 zoom: var(--print-scale, 1); 
                             }
 
@@ -1080,52 +1076,50 @@
                             .print-area { 
                                 width: 100%; 
                                 border-collapse: collapse; 
-                                font-size: 11px; /* 読みやすいサイズに */
+                                font-size: 9px; /* 小さくして1ページに収める */
                                 table-layout: fixed; 
                                 border: 2px solid #000 !important;
                             }
 
                             .print-area th, .print-area td { 
-                                border: 1px solid #000 !important; /* 黒くはっきりした罫線 */
+                                border: 1px solid #000 !important; 
                                 text-align: center; 
                                 vertical-align: middle; 
-                                padding: 2px !important; 
+                                padding: 0px 2px !important; /* 行の高さを極限まで詰める */
                                 white-space: nowrap; 
                                 overflow: hidden;
                                 text-overflow: ellipsis;
                                 color: #000 !important;
+                                height: auto !important;
+                                line-height: 1.1 !important;
                             }
 
                             .print-area th { 
-                                background-color: #e5e7eb !important; /* 薄いグレー */
+                                background-color: #e5e7eb !important; 
                                 color: #000 !important; 
                                 font-weight: 800 !important; 
-                                height: 24px !important; 
-                                font-size: 10px !important; 
+                                font-size: 9px !important; 
                             }
 
-                            /* 結合セルのスタイル */
                             .print-area td[colspan] {
                                 background-color: #fff !important;
                             }
                             
-                            /* 閉鎖セルのスタイル */
                             .print-area td.bg-gray-300 {
-                                background-color: #d1d5db !important; /* 印刷用に少し濃いグレー */
+                                background-color: #d1d5db !important; 
                                 color: #4b5563 !important;
                             }
 
                             .print-header { 
-                                font-size: 20px; 
+                                font-size: 16px; 
                                 font-weight: 900; 
-                                margin-bottom: 10px; 
+                                margin-bottom: 5px; 
                                 text-align: center; 
-                                padding-top: 10px; 
+                                padding-top: 5px; 
                                 color: #000;
                                 text-decoration: underline;
                             }
 
-                            /* 印刷時の改ページ制御 */
                             tr { break-inside: avoid; page-break-inside: avoid; }
                         }
                     `}</style>
@@ -1244,7 +1238,13 @@
                             <div className="hidden print-only print-header">{formatDateWithDay(currentShift.date)} シフト表</div>
                             <div className="overflow-x-auto">
                                 <table className="w-full text-xs text-center border-collapse print-area">
-                                    <colgroup><col className="w-24" style={{ width: '15%' }} />{timeSlots.map(t => (<col key={t} className="min-w-[40px]" style={{ width: `calc(85% / ${timeSlots.length})` }} />))}</colgroup>
+                                    <colgroup>
+                                        {/* 左端の号車列を80px固定とし、残りを時間帯列で等分する */}
+                                        <col className="w-20" style={{ width: '80px' }} />
+                                        {timeSlots.map(t => (
+                                            <col key={t} style={{ width: `calc((100% - 80px) / ${timeSlots.length})` }} />
+                                        ))}
+                                    </colgroup>
                                     <thead><tr><th className="p-2 border bg-blue-50 text-blue-900 font-bold sticky left-0 z-10 print:static">号車 / 時間</th>{timeSlots.map(time => (<th key={time} className="p-1 border bg-gray-50 font-mono print:static">{time}</th>))}</tr></thead>
                                     <tbody className="screen-table-row">
                                         {activeRegisters.map(reg => {
