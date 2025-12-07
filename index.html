@@ -1042,6 +1042,10 @@
                     <style>{`
                         @media print {
                             @page { size: A4 landscape; margin: 3mm; }
+                            html, body {
+                                width: 100%;
+                                min-width: 1100px; /* iPhone対策: 横幅を強制して横向き縮小を促す */
+                            }
                             body { 
                                 visibility: hidden; 
                                 background: white !important; 
@@ -1056,7 +1060,7 @@
                                 position: fixed !important; 
                                 top: 0 !important; 
                                 left: 0 !important; 
-                                width: 100% !important; 
+                                width: 1122px !important; /* A4横幅相当の固定幅 */
                                 height: 100% !important;
                                 background: white !important; 
                                 z-index: 2147483647 !important; 
@@ -1074,9 +1078,9 @@
                             .screen-table-row { display: none !important; }
 
                             .print-area { 
-                                width: 100%; 
+                                width: 280mm; /* ピクセルではなくmm指定でA4横に強制 */
                                 border-collapse: collapse; 
-                                font-size: 9px; /* 小さくして1ページに収める */
+                                font-size: 8.5px; /* 文字サイズを微調整 */
                                 table-layout: fixed; 
                                 border: 2px solid #000 !important;
                             }
@@ -1085,7 +1089,7 @@
                                 border: 1px solid #000 !important; 
                                 text-align: center; 
                                 vertical-align: middle; 
-                                padding: 0px 2px !important; /* 行の高さを極限まで詰める */
+                                padding: 0px 1px !important; /* 余白を極小に */
                                 white-space: nowrap; 
                                 overflow: hidden;
                                 text-overflow: ellipsis;
@@ -1098,7 +1102,7 @@
                                 background-color: #e5e7eb !important; 
                                 color: #000 !important; 
                                 font-weight: 800 !important; 
-                                font-size: 9px !important; 
+                                font-size: 8.5px !important; 
                             }
 
                             .print-area td[colspan] {
@@ -1111,9 +1115,9 @@
                             }
 
                             .print-header { 
-                                font-size: 16px; 
+                                font-size: 14px; 
                                 font-weight: 900; 
-                                margin-bottom: 5px; 
+                                margin-bottom: 2px; 
                                 text-align: center; 
                                 padding-top: 5px; 
                                 color: #000;
