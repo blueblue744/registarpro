@@ -47,8 +47,7 @@
             Printer, RefreshCw, Settings, Clock, AlertCircle, ArrowLeftRight, 
             UserCheck, UserX, ChevronDown, ChevronUp, History, XCircle, Ban, 
             Users, Monitor, CalendarRange, Save, Database, Plus, Trash2, 
-            Edit2, GripVertical, Check, Badge, FileText, Upload, 
-            FolderOpen, Download, FileJson
+            Edit2, GripVertical, Check, Badge, FileText, Upload 
         } from 'lucide-react';
 
         // ==========================================
@@ -1286,10 +1285,6 @@
             const [activeTab, setActiveTab] = useState(TABS.SHIFT);
             const [data, setData] = useState(INITIAL_DATA);
             const [isLoaded, setIsLoaded] = useState(false);
-            
-            // New State for File Handle
-            const [fileHandle, setFileHandle] = useState(null);
-            const [fileName, setFileName] = useState("");
 
             useEffect(() => {
                 const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
@@ -1308,78 +1303,6 @@
             useEffect(() => {
                 if (isLoaded) localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data));
             }, [data, isLoaded]);
-
-            // File System Access API Functions
-            const handleOpenFile = async () => {
-                if (!window.showOpenFilePicker) {
-                    alert("このブラウザはファイルシステム操作に対応していません。\nChromeまたはEdgeを使用してください。");
-                    return;
-                }
-                try {
-                    const [handle] = await window.showOpenFilePicker({
-                        types: [{ description: 'JSON File', accept: { 'application/json': ['.json'] } }],
-                    });
-                    const file = await handle.getFile();
-                    const text = await file.text();
-                    const json = JSON.parse(text);
-                    
-                    // Simple validation
-                    if (!json.staff || !json.registers) {
-                        alert("無効なファイル形式です。");
-                        return;
-                    }
-
-                    if (confirm(`「${file.name}」を読み込みますか？\n現在の未保存データは上書きされます。`)) {
-                        setData(json);
-                        setFileHandle(handle);
-                        setFileName(file.name);
-                        alert("読み込みが完了しました。");
-                    }
-                } catch (err) {
-                    if (err.name !== 'AbortError') {
-                        console.error(err);
-                        alert("ファイルの読み込みに失敗しました。");
-                    }
-                }
-            };
-
-            const handleSave = async () => {
-                if (!fileHandle) {
-                    return handleSaveAs();
-                }
-                try {
-                    const writable = await fileHandle.createWritable();
-                    await writable.write(JSON.stringify(data, null, 2));
-                    await writable.close();
-                    alert(`「${fileName}」に上書き保存しました。`);
-                } catch (err) {
-                    console.error(err);
-                    alert("保存に失敗しました。アクセス権限がない可能性があります。");
-                }
-            };
-
-            const handleSaveAs = async () => {
-                if (!window.showSaveFilePicker) {
-                    alert("このブラウザはファイルシステム操作に対応していません。");
-                    return;
-                }
-                try {
-                    const handle = await window.showSaveFilePicker({
-                        suggestedName: `regimaster_backup_${new Date().toISOString().split('T')[0]}.json`,
-                        types: [{ description: 'JSON File', accept: { 'application/json': ['.json'] } }],
-                    });
-                    const writable = await handle.createWritable();
-                    await writable.write(JSON.stringify(data, null, 2));
-                    await writable.close();
-                    
-                    setFileHandle(handle);
-                    const file = await handle.getFile();
-                    setFileName(file.name);
-                    alert(`「${file.name}」として保存しました。`);
-                } catch (err) {
-                    if (err.name !== 'AbortError') console.error(err);
-                }
-            };
 
             const handleBackup = () => {
                 const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -1414,9 +1337,66 @@
             const handleReset = () => {
                 if (confirm('すべてのデータを消去し、初期状態（レジ1〜20号など）に戻しますか？\nこの操作は元に戻せません。')) {
                     setData(INITIAL_DATA);
-                    setFileHandle(null);
-                    setFileName("");
                     alert('初期化しました。');
+                }
+            };
+            
+            // 新規追加: HTML形式で保存する機能
+            const handleSaveHTML = async (isSaveAs) => {
+                // 1. 現在のHTMLソースを取得
+                let html = document.documentElement.outerHTML;
+
+                // 2. ReactがレンダリングしたDOMをクリア (id="root"の中身を空にする)
+                html = html.replace(/<div id="root">.*?<\/div>/s, '<div id="root"></div>');
+
+                // 3. データ埋め込み: INITIAL_DATA定数の定義部分を現在のデータで置換
+                const dataString = JSON.stringify(data, null, 4);
+                // ソースコード内の定義パターンを見つけて置換
+                const initialDataRegex = /const INITIAL_DATA = \{[\s\S]*?\};/;
+                html = html.replace(initialDataRegex, `const INITIAL_DATA = ${dataString};`);
+                
+                // 4. LocalStorageキーをユニークなものに変更 (保存したファイルを開いた時に、ブラウザのキャッシュではなく埋め込んだデータを優先させるため)
+                const newStorageKey = `regi_master_pro_v2_saved_${Date.now()}`;
+                const storageKeyRegex = /const LOCAL_STORAGE_KEY = 'regi_master_pro_v2';/;
+                html = html.replace(storageKeyRegex, `const LOCAL_STORAGE_KEY = '${newStorageKey}';`);
+
+                // 5. 保存処理
+                if (isSaveAs) {
+                     // 「名前をつけて保存」 (ダウンロードリンクとして処理)
+                     const blob = new Blob([html], { type: 'text/html' });
+                     const url = URL.createObjectURL(blob);
+                     const a = document.createElement('a');
+                     a.href = url;
+                     a.download = `RegiMaster_${new Date().toISOString().slice(0,10)}.html`;
+                     a.click();
+                } else {
+                    // 「上書き保存」 (File System Access API 対応ブラウザのみ)
+                    if (window.showSaveFilePicker) {
+                        try {
+                            const handle = await window.showSaveFilePicker({
+                                suggestedName: 'index.html',
+                                types: [{ description: 'HTML File', accept: {'text/html': ['.html']} }],
+                            });
+                            const writable = await handle.createWritable();
+                            await writable.write(html);
+                            await writable.close();
+                            alert('保存しました。');
+                        } catch (err) {
+                            if (err.name !== 'AbortError') {
+                                console.error(err);
+                                alert('保存できませんでした。「名前をつけて保存」を試してください。');
+                            }
+                        }
+                    } else {
+                        // 非対応ブラウザはダウンロードとして処理
+                        alert('お使いのブラウザは直接の上書き保存に対応していません。「名前をつけて保存」としてダウンロードされます。元のファイルを置き換えてください。');
+                        const blob = new Blob([html], { type: 'text/html' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = 'index.html';
+                        a.click();
+                    }
                 }
             };
 
@@ -1445,36 +1425,25 @@
                         {activeTab === TABS.REGISTER && <RegisterView registers={data.registers} setRegisters={(registers) => setData({ ...data, registers })} />}
                         {activeTab === TABS.DATA && (
                             <div className="max-w-2xl mx-auto space-y-8">
-                                {/* New File System Section */}
                                 <div className="bg-white p-6 rounded-lg shadow border border-blue-200">
-                                    <h2 className="text-lg font-bold mb-2 flex items-center gap-2 text-blue-800"><Save size={20} /> PCファイル操作 (推奨)</h2>
-                                    <p className="text-sm text-gray-600 mb-4">PC内のファイルを直接開いたり、上書き保存したりできます (Chrome/Edgeのみ)。</p>
-                                    
-                                    {fileName && (
-                                        <div className="bg-blue-50 border border-blue-100 text-blue-700 px-4 py-2 rounded mb-4 text-sm font-bold flex items-center gap-2">
-                                            <FileJson size={16} /> 現在編集中のファイル: {fileName}
-                                        </div>
-                                    )}
-
-                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                        <button onClick={handleOpenFile} className="flex flex-col items-center justify-center gap-2 p-4 bg-white border-2 border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-all">
-                                            <FolderOpen size={24} className="text-gray-600"/>
-                                            <span className="font-bold text-sm">ファイルを開く</span>
+                                    <h2 className="text-lg font-bold mb-4 flex items-center gap-2 text-blue-800"><Save size={20} /> アプリ本体の保存 (HTML形式)</h2>
+                                    <p className="text-sm text-gray-600 mb-4">
+                                        現在のデータを含んだ状態で、このアプリ(HTMLファイル)自体を保存します。<br/>
+                                        PCでファイルを移動してもデータを保持したい場合に使用します。
+                                    </p>
+                                    <div className="flex gap-4">
+                                        <button onClick={() => handleSaveHTML(false)} className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 font-bold flex items-center gap-2">
+                                            <Save size={18} /> 上書き保存
                                         </button>
-                                        <button onClick={handleSave} className="flex flex-col items-center justify-center gap-2 p-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-md transition-all">
-                                            <Save size={24}/>
-                                            <span className="font-bold text-sm">上書き保存</span>
-                                        </button>
-                                        <button onClick={handleSaveAs} className="flex flex-col items-center justify-center gap-2 p-4 bg-white border-2 border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-all">
-                                            <Download size={24} className="text-gray-600"/>
-                                            <span className="font-bold text-sm">名前を付けて保存</span>
+                                        <button onClick={() => handleSaveHTML(true)} className="bg-white text-gray-700 border border-gray-300 px-6 py-2 rounded hover:bg-gray-50 flex items-center gap-2">
+                                            <Save size={18} /> 名前をつけて保存
                                         </button>
                                     </div>
+                                    <p className="text-xs text-gray-400 mt-2">※「上書き保存」は対応ブラウザ(Chrome/Edge等)のみ動作します。それ以外はダウンロードされます。</p>
                                 </div>
 
-                                {/* Original Sections */}
-                                <div className="bg-white p-6 rounded-lg shadow border"><h2 className="text-lg font-bold mb-4 flex items-center gap-2"><Download size={20} /> 旧バックアップ (ダウンロード)</h2><p className="text-sm text-gray-600 mb-4">現在のデータをJSONファイルとしてダウンロードします（上書きはされません）。</p><button onClick={handleBackup} className="bg-gray-600 text-white px-6 py-2 rounded hover:bg-gray-700 text-sm">バックアップをダウンロード</button></div>
-                                <div className="bg-white p-6 rounded-lg shadow border"><h2 className="text-lg font-bold mb-4 flex items-center gap-2"><History size={20} /> 旧復元 (ファイル選択)</h2><p className="text-sm text-gray-600 mb-4">バックアップファイルを選択してデータを復元します。</p><input type="file" accept=".json" onChange={handleRestore} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" /></div>
+                                <div className="bg-white p-6 rounded-lg shadow border"><h2 className="text-lg font-bold mb-4 flex items-center gap-2"><FileText size={20} /> バックアップ (JSON)</h2><p className="text-sm text-gray-600 mb-4">現在のすべてのデータをJSONファイルとしてダウンロードします。（別の端末で復元する場合などに使用）</p><button onClick={handleBackup} className="bg-gray-700 text-white px-6 py-2 rounded hover:bg-gray-800">バックアップをダウンロード</button></div>
+                                <div className="bg-white p-6 rounded-lg shadow border"><h2 className="text-lg font-bold mb-4 flex items-center gap-2"><History size={20} /> 復元 (JSON)</h2><p className="text-sm text-gray-600 mb-4">バックアップファイル(JSON)を選択してデータを復元します。</p><input type="file" accept=".json" onChange={handleRestore} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" /></div>
                                 <div className="bg-red-50 p-6 rounded-lg shadow border border-red-100"><h2 className="text-lg font-bold mb-4 flex items-center gap-2 text-red-700"><Trash2Icon size={20} /> データ初期化</h2><p className="text-sm text-red-600 mb-4">アプリのすべてのデータを消去し、初期状態（レジ1〜20号など）に戻します。</p><button onClick={handleReset} className="bg-red-600 text-white px-6 py-2 rounded hover:bg-red-700 border border-red-700">データを初期化する</button></div>
                             </div>
                         )}
