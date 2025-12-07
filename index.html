@@ -1110,7 +1110,7 @@
                                 color: #000 !important; 
                                 font-weight: 800 !important; 
                                 height: 35px !important; /* 高さを高く */
-                                font-size: 11px !important; 
+                                font-size: 10px !important; /* 文字数が増えたので少し小さく */
                                 padding: 0 !important;
                             }
 
@@ -1266,7 +1266,7 @@
                                             <col key={t} style={{ width: `calc((100% - 80px) / ${timeSlots.length})` }} />
                                         ))}
                                     </colgroup>
-                                    <thead><tr><th className="p-2 border bg-blue-50 text-blue-900 font-bold sticky left-0 z-10 print:static">号車 / 時間</th>{timeSlots.map(time => (<th key={time} className="p-1 border bg-gray-50 font-mono print:static">{time}</th>))}</tr></thead>
+                                    <thead><tr><th className="p-2 border bg-blue-50 text-blue-900 font-bold sticky left-0 z-10 print:static">号車 / 時間</th>{timeSlots.map(time => (<th key={time} className="p-1 border bg-gray-50 font-mono print:static">{time}〜</th>))}</tr></thead>
                                     <tbody className="screen-table-row">
                                         {activeRegisters.map(reg => {
                                             const isFullyClosed = timeSlots.every(t => currentShift?.cells[`${t}-${reg.id}`]?.staffId === CLOSED_SHIFT_ID);
