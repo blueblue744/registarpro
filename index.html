@@ -1054,7 +1054,7 @@
                     @media print {
                         @page { size: landscape; margin: 3mm; }
                         body { visibility: hidden; background: white !important; }
-                        button, nav, header, .sidebar, .no-print { display: none !important; }
+                        button, nav, header, .sidebar { display: none !important; }
                         body > *:not(#root) { display: none !important; }
                         .shift-table-container { 
                             visibility: visible !important; 
@@ -1203,7 +1203,12 @@
                             <div className="hidden print-only print-header">{formatDateWithDay(currentShift.date)} シフト表</div>
                             <div className="overflow-x-auto">
                                 <table className="w-full text-xs text-center border-collapse print-area">
-                                    <colgroup><col className="w-24" style={{ width: '15%' }} />{timeSlots.map(t => (<col key={t} className="min-w-[40px]" style={{ width: `calc(85% / ${timeSlots.length})` }} />))}</colgroup>
+                                    <colgroup>
+                                        <col className="w-24" style={{ width: '15%' }} />
+                                        {timeSlots.map(t => (
+                                            <col key={t} className="min-w-[40px]" style={{ width: `calc(85% / ${timeSlots.length})` }} />
+                                        ))}
+                                    </colgroup>
                                     <thead><tr><th className="p-2 border bg-blue-50 text-blue-900 font-bold sticky left-0 z-10 print:static">号車 / 時間</th>{timeSlots.map(time => (<th key={time} className="p-1 border bg-gray-50 font-mono print:static">{time}</th>))}</tr></thead>
                                     <tbody className="screen-table-row">
                                         {activeRegisters.map(reg => {
