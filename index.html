@@ -43,7 +43,6 @@
     <script type="text/babel" data-type="module" data-presets="typescript,react">
         import React, { useState, useEffect, useMemo, useRef } from 'react';
         import ReactDOM from 'react-dom/client';
-        // 修正: 'X' をインポートリストの最後に追加しました
         import { 
             Printer, RefreshCw, Settings, Clock, AlertCircle, ArrowLeftRight, 
             UserCheck, UserX, ChevronDown, ChevronUp, History, XCircle, Ban, 
@@ -524,7 +523,7 @@
                                     <input type="text" className="w-full border rounded p-2 focus:ring-2 focus:ring-blue-500 outline-none" value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} />
                                 </div>
                                 
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">分類</label>
                                         <select className="w-full border rounded p-2" value={editForm.type} onChange={e => setEditForm({ ...editForm, type: e.target.value })}>
@@ -536,7 +535,7 @@
                                         <label className="block text-sm font-medium text-gray-700 mb-1">優先度 (0-100)</label>
                                         <div className="flex items-center gap-2">
                                             <input type="number" min={PRIORITY_MIN} max={PRIORITY_MAX} className="w-20 border rounded p-2 text-center" value={editForm.priority} onChange={e => setEditForm({ ...editForm, priority: Number(e.target.value) })} />
-                                            <input type="range" min={PRIORITY_MIN} max={PRIORITY_MAX} value={editForm.priority} onChange={e => setEditForm({...editForm, priority: Number(e.target.value)})} className="flex-1 cursor-pointer" />
+                                            <input type="range" min={PRIORITY_MIN} max={PRIORITY_MAX} value={editForm.priority} onChange={e => setEditForm({...editForm, priority: Number(e.target.value)})} className="flex-1 cursor-pointer min-w-0" />
                                         </div>
                                     </div>
                                 </div>
