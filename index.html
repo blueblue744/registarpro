@@ -915,6 +915,17 @@
                 setShowOverwriteModal(false);
             };
 
+            const deleteCurrentShift = () => {
+                const targetShift = data.shifts.find(s => s.date === selectedDate);
+                if (!targetShift) return;
+                
+                if (window.confirm(`${formatDateWithDay(selectedDate)} のシフトデータを完全に削除しますか？\nこの操作は元に戻せません。`)) {
+                    const newShifts = data.shifts.filter(s => s.id !== targetShift.id);
+                    setData({ ...data, shifts: newShifts });
+                    setSelectedShiftId(null);
+                }
+            };
+
             const handleManualChange = (time, regId, value) => {
                 if (!currentShift) return;
                 const key = `${time}-${regId}`;
@@ -1043,11 +1054,23 @@
                     @media print {
                         @page { size: landscape; margin: 3mm; }
                         body { visibility: hidden; background: white !important; }
-                        button, nav, header, .sidebar { display: none !important; }
+                        
+                        /* Layout reset for printing */
+                        :root, body, #root, #root > div, main {
+                            height: auto !important;
+                            width: 100% !important;
+                            overflow: visible !important;
+                            display: block !important;
+                            margin: 0 !important;
+                            padding: 0 !important;
+                        }
+
+                        button, nav, header, .sidebar, .no-print { display: none !important; }
                         body > *:not(#root) { display: none !important; }
+
                         .shift-table-container { 
                             visibility: visible !important; 
-                            position: fixed !important; 
+                            position: absolute !important;
                             top: 0 !important; 
                             left: 0 !important; 
                             width: 100vw !important; 
@@ -1061,7 +1084,6 @@
                             zoom: var(--print-scale, 1); 
                         }
                         .shift-table-container * { visibility: visible !important; }
-                        .no-print { display: none !important; }
                         .print-only { display: block !important; }
                         .print-table-row { display: table-row-group !important; }
                         .screen-table-row { display: none !important; }
@@ -1132,6 +1154,11 @@
                                         <div className="flex gap-2 items-center ml-2 border-l pl-2 border-gray-300"><Clock size={14} className="text-gray-500" /><input type="time" value={data.settings.openTime} onChange={e => updateSettings('openTime', e.target.value)} className="border rounded px-1 py-0.5 text-sm" /><span>~</span><input type="time" value={data.settings.closeTime} onChange={e => updateSettings('closeTime', e.target.value)} className="border rounded px-1 py-0.5 text-sm" /></div>
                                     )}
                                 </div>
+                                {data.shifts.some(s => s.date === selectedDate) && (
+                                    <button onClick={deleteCurrentShift} className="bg-red-100 text-red-700 px-3 py-3 rounded shadow hover:bg-red-200 flex items-center gap-2 font-bold transition-colors border border-red-200" title="この日のシフトを削除">
+                                        <Trash2 size={20} />
+                                    </button>
+                                )}
                                 <button onClick={checkAndGenerate} className="bg-blue-600 text-white px-6 py-3 rounded shadow hover:bg-blue-700 flex items-center gap-2 font-bold transition-colors"><RefreshCw size={20} /> シフト作成</button>
                             </div>
                         </div>
