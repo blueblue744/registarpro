@@ -1054,8 +1054,20 @@
                     @media print {
                         @page { size: landscape; margin: 3mm; }
                         body { visibility: hidden; background: white !important; }
+                        
+                        /* Layout reset for printing */
+                        :root, body, #root, #root > div, main {
+                            height: auto !important;
+                            width: 100% !important;
+                            overflow: visible !important;
+                            display: block !important;
+                            margin: 0 !important;
+                            padding: 0 !important;
+                        }
+
                         button, nav, header, .sidebar, .no-print { display: none !important; }
                         body > *:not(#root) { display: none !important; }
+
                         .shift-table-container { 
                             visibility: visible !important; 
                             position: fixed !important; 
@@ -1072,7 +1084,6 @@
                             zoom: var(--print-scale, 1); 
                         }
                         .shift-table-container * { visibility: visible !important; }
-                        .no-print { display: none !important; }
                         .print-only { display: block !important; }
                         .print-table-row { display: table-row-group !important; }
                         .screen-table-row { display: none !important; }
@@ -1203,7 +1214,12 @@
                             <div className="hidden print-only print-header">{formatDateWithDay(currentShift.date)} シフト表</div>
                             <div className="overflow-x-auto">
                                 <table className="w-full text-xs text-center border-collapse print-area">
-                                    <colgroup><col className="w-24" style={{ width: '15%' }} />{timeSlots.map(t => (<col key={t} className="min-w-[40px]" style={{ width: `calc(85% / ${timeSlots.length})` }} />))}</colgroup>
+                                    <colgroup>
+                                        <col className="w-24" style={{ width: '15%' }} />
+                                        {timeSlots.map(t => (
+                                            <col key={t} className="min-w-[40px]" style={{ width: `calc(85% / ${timeSlots.length})` }} />
+                                        ))}
+                                    </colgroup>
                                     <thead><tr><th className="p-2 border bg-blue-50 text-blue-900 font-bold sticky left-0 z-10 print:static">号車 / 時間</th>{timeSlots.map(time => (<th key={time} className="p-1 border bg-gray-50 font-mono print:static">{time}</th>))}</tr></thead>
                                     <tbody className="screen-table-row">
                                         {activeRegisters.map(reg => {
@@ -1297,6 +1313,45 @@
             settings: { openTime: DEFAULT_OPEN_TIME, closeTime: DEFAULT_CLOSE_TIME }
         };
 
+        const DataPanel = ({ onBackup, onRestore, onReset, onSaveHtml }) => (
+            <div className="max-w-2xl mx-auto space-y-8">
+                <div className="bg-white p-6 rounded-lg shadow border border-blue-200">
+                    <h2 className="text-lg font-bold mb-4 flex items-center gap-2 text-blue-800"><Save size={20} /> アプリ本体の保存 (HTML形式)</h2>
+                    <p className="text-sm text-gray-600 mb-4">
+                        現在のデータを含んだ状態で、このアプリ(HTMLファイル)自体を保存します。<br/>
+                        PCでファイルを移動してもデータを保持したい場合に使用します。
+                    </p>
+                    <div className="flex gap-4">
+                        <button onClick={() => onSaveHtml(false)} className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 font-bold flex items-center gap-2">
+                            <Save size={18} /> 上書き保存
+                        </button>
+                        <button onClick={() => onSaveHtml(true)} className="bg-white text-gray-700 border border-gray-300 px-6 py-2 rounded hover:bg-gray-50 flex items-center gap-2">
+                            <Save size={18} /> 名前をつけて保存
+                        </button>
+                    </div>
+                    <p className="text-xs text-gray-400 mt-2">※「上書き保存」は対応ブラウザ(Chrome/Edge等)のみ動作します。それ以外はダウンロードされます。</p>
+                </div>
+
+                <div className="bg-white p-6 rounded-lg shadow border"><h2 className="text-lg font-bold mb-4 flex items-center gap-2"><FileText size={20} /> バックアップ (JSON)</h2><p className="text-sm text-gray-600 mb-4">現在のすべてのデータをJSONファイルとしてダウンロードします。（別の端末で復元する場合などに使用）</p><button onClick={onBackup} className="bg-gray-700 text-white px-6 py-2 rounded hover:bg-gray-800">バックアップをダウンロード</button></div>
+                <div className="bg-white p-6 rounded-lg shadow border"><h2 className="text-lg font-bold mb-4 flex items-center gap-2"><History size={20} /> 復元 (JSON)</h2><p className="text-sm text-gray-600 mb-4">バックアップファイル(JSON)を選択してデータを復元します。</p><input type="file" accept=".json" onChange={onRestore} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" /></div>
+                <div className="bg-red-50 p-6 rounded-lg shadow border border-red-100"><h2 className="text-lg font-bold mb-4 flex items-center gap-2 text-red-700"><Trash2Icon size={20} /> データ初期化</h2><p className="text-sm text-red-600 mb-4">アプリのすべてのデータを消去し、初期状態（レジ1〜20号など）に戻します。</p><button onClick={onReset} className="bg-red-600 text-white px-6 py-2 rounded hover:bg-red-700 border border-red-700">データを初期化する</button></div>
+            </div>
+        );
+
+        const TabButton = ({ active, onClick, icon, label }) => (
+            <button onClick={onClick} className={`flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 rounded-lg transition-all ${active ? 'bg-blue-50 text-blue-700 ring-1 ring-blue-200' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900'}`}>
+                {icon}
+                <span className="text-[9px] font-bold leading-none whitespace-nowrap">{label}</span>
+            </button>
+        );
+
+        const SidebarItem = ({ active, onClick, icon, label }) => (
+            <button onClick={onClick} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all text-sm font-medium ${active ? 'bg-blue-50 text-blue-700 border-l-4 border-blue-600' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 border-l-4 border-transparent'}`}>
+                {icon}
+                <span>{label}</span>
+            </button>
+        );
+
         function App() {
             const [activeTab, setActiveTab] = useState(TABS.SHIFT);
             const [data, setData] = useState(INITIAL_DATA);
@@ -1362,4 +1417,132 @@
                 let html = document.documentElement.outerHTML;
                 html = html.replace(/<div id="root">.*?<\/div>/s, '<div id="root"></div>');
                 const dataString = JSON.stringify(data, null, 4);
-                const initialDataRegex = /const INITIAL_DATA = \{
+                const initialDataRegex = /const INITIAL_DATA = \{[\s\S]*?\};/;
+                html = html.replace(initialDataRegex, `const INITIAL_DATA = ${dataString};`);
+                const newStorageKey = `regi_master_pro_v2_saved_${Date.now()}`;
+                const storageKeyRegex = /const LOCAL_STORAGE_KEY = 'regi_master_pro_v2';/;
+                html = html.replace(storageKeyRegex, `const LOCAL_STORAGE_KEY = '${newStorageKey}';`);
+
+                if (isSaveAs) {
+                     const blob = new Blob([html], { type: 'text/html' });
+                     const url = URL.createObjectURL(blob);
+                     const a = document.createElement('a');
+                     a.href = url;
+                     a.download = `RegiMaster_${new Date().toISOString().slice(0,10)}.html`;
+                     a.click();
+                } else {
+                    if (window.showSaveFilePicker) {
+                        try {
+                            const handle = await window.showSaveFilePicker({
+                                suggestedName: 'index.html',
+                                types: [{ description: 'HTML File', accept: {'text/html': ['.html']} }],
+                            });
+                            const writable = await handle.createWritable();
+                            await writable.write(html);
+                            await writable.close();
+                            alert('保存しました。');
+                        } catch (err) {
+                            if (err.name !== 'AbortError') {
+                                console.error(err);
+                                alert('保存できませんでした。「名前をつけて保存」を試してください。');
+                            }
+                        }
+                    } else {
+                        alert('お使いのブラウザは直接の上書き保存に対応していません。「名前をつけて保存」としてダウンロードされます。元のファイルを置き換えてください。');
+                        const blob = new Blob([html], { type: 'text/html' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = 'index.html';
+                        a.click();
+                    }
+                }
+            };
+
+            const availableBadges = data.registers.filter(r => r.isBadgeRole).map(r => r.name).sort();
+
+            if (!isLoaded) return <div className="flex h-screen items-center justify-center text-gray-500">Loading...</div>;
+
+            // PC Mode Layout (Sidebar)
+            if (isPcMode) {
+                return (
+                    <div className="flex h-screen bg-gray-50 text-gray-800 font-sans overflow-hidden">
+                        <aside className="w-64 bg-white border-r border-gray-200 flex flex-col justify-between sidebar no-print flex-shrink-0">
+                            <div>
+                                <div className="p-6">
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <div className="bg-blue-600 text-white p-1.5 rounded-lg"><CalendarRange size={20} /></div>
+                                        <h1 className="text-lg font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 truncate">RegiMaster Pro</h1>
+                                    </div>
+                                    <p className="text-xs text-gray-400 pl-1">PC Optimized</p>
+                                </div>
+                                <nav className="px-4 space-y-2">
+                                    <SidebarItem active={activeTab === TABS.SHIFT} onClick={() => setActiveTab(TABS.SHIFT)} icon={<CalendarRange size={20} />} label="シフト作成" />
+                                    <SidebarItem active={activeTab === TABS.STAFF} onClick={() => setActiveTab(TABS.STAFF)} icon={<Users size={20} />} label="スタッフ管理" />
+                                    <SidebarItem active={activeTab === TABS.REGISTER} onClick={() => setActiveTab(TABS.REGISTER)} icon={<Monitor size={20} />} label="レジ設定" />
+                                    <SidebarItem active={activeTab === TABS.DATA} onClick={() => setActiveTab(TABS.DATA)} icon={<Database size={20} />} label="データ保存・読込" />
+                                </nav>
+                            </div>
+                            <div className="p-4 border-t border-gray-100">
+                                <button onClick={() => setIsPcMode(false)} className="flex items-center gap-2 text-sm text-gray-500 hover:text-blue-600 transition-colors w-full px-4 py-2 rounded hover:bg-gray-50">
+                                    <Smartphone size={16} />
+                                    <span>スマホビューへ切替</span>
+                                </button>
+                            </div>
+                        </aside>
+                        <main className="flex-1 overflow-y-auto p-8 w-full">
+                            <div className="max-w-full mx-auto">
+                                {activeTab === TABS.SHIFT && <ShiftView data={data} setData={setData} />}
+                                {activeTab === TABS.STAFF && <StaffView staffList={data.staff} setStaffList={(staff) => setData({ ...data, staff })} availableBadges={availableBadges} />}
+                                {activeTab === TABS.REGISTER && <RegisterView registers={data.registers} setRegisters={(registers) => setData({ ...data, registers })} />}
+                                {activeTab === TABS.DATA && <DataPanel onBackup={handleBackup} onRestore={handleRestore} onReset={handleReset} onSaveHtml={handleSaveHTML} />}
+                            </div>
+                        </main>
+                    </div>
+                );
+            }
+
+            // Mobile Mode Layout (Header)
+            return (
+                <div className="min-h-screen bg-gray-50 text-gray-800 font-sans">
+                    <header className="bg-white border-b border-gray-200 sticky top-0 z-50 no-print">
+                        <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
+                            <div className="flex justify-between items-center h-16">
+                                <div className="flex items-center gap-2">
+                                    <div className="bg-blue-600 text-white p-2 rounded-lg hidden sm:block"><CalendarRange size={24} /></div>
+                                    <h1 className="text-lg sm:text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 truncate">RegiMaster Pro</h1>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <nav className="flex space-x-1 sm:space-x-2">
+                                        <TabButton active={activeTab === TABS.SHIFT} onClick={() => setActiveTab(TABS.SHIFT)} icon={<CalendarRange size={20} />} label="シフト" />
+                                        <TabButton active={activeTab === TABS.STAFF} onClick={() => setActiveTab(TABS.STAFF)} icon={<Users size={20} />} label="スタッフ" />
+                                        <TabButton active={activeTab === TABS.REGISTER} onClick={() => setActiveTab(TABS.REGISTER)} icon={<Monitor size={20} />} label="レジ" />
+                                        <TabButton active={activeTab === TABS.DATA} onClick={() => setActiveTab(TABS.DATA)} icon={<Database size={20} />} label="データ" />
+                                    </nav>
+                                    <button onClick={() => setIsPcMode(true)} className="ml-2 p-2 text-gray-400 hover:text-blue-600 rounded-full hover:bg-gray-100 hidden sm:block" title="PCビューへ切替">
+                                        <Layout size={20} />
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </header>
+                    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                        <div className="sm:hidden mb-4 flex justify-end">
+                             <button onClick={() => setIsPcMode(true)} className="flex items-center gap-1 text-xs text-gray-500 bg-white border px-2 py-1 rounded shadow-sm">
+                                <Layout size={14} /> PCビュー
+                             </button>
+                        </div>
+                        {activeTab === TABS.SHIFT && <ShiftView data={data} setData={setData} />}
+                        {activeTab === TABS.STAFF && <StaffView staffList={data.staff} setStaffList={(staff) => setData({ ...data, staff })} availableBadges={availableBadges} />}
+                        {activeTab === TABS.REGISTER && <RegisterView registers={data.registers} setRegisters={(registers) => setData({ ...data, registers })} />}
+                        {activeTab === TABS.DATA && <DataPanel onBackup={handleBackup} onRestore={handleRestore} onReset={handleReset} onSaveHtml={handleSaveHTML} />}
+                    </main>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
