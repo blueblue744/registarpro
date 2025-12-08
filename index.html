@@ -51,7 +51,7 @@
         } from 'lucide-react';
 
         // ==========================================
-        // Constants
+        // Constants & Helpers
         // ==========================================
         const DEFAULT_OPEN_TIME = "09:00";
         const DEFAULT_CLOSE_TIME = "21:00";
@@ -61,20 +61,13 @@
         const PRIORITY_MIN = 0;
         const LOCAL_STORAGE_KEY = 'regi_master_pro_v2';
 
-        // ==========================================
-        // Types & Definitions
-        // ==========================================
         const DAYS_OF_WEEK = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday', 'Holiday'];
         const DAY_LABELS = {
-            Monday: '月',
-            Tuesday: '火',
-            Wednesday: '水',
-            Thursday: '木',
-            Friday: '金',
-            Saturday: '土',
-            Sunday: '日',
-            Holiday: '祝',
+            Monday: '月', Tuesday: '火', Wednesday: '水', Thursday: '木',
+            Friday: '金', Saturday: '土', Sunday: '日', Holiday: '祝',
         };
+
+        const Trash2Icon = ({ size }) => (<svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /><line x1="10" x2="10" y1="11" y2="17" /><line x1="14" x2="14" y1="11" y2="17" /></svg>);
 
         // ==========================================
         // Logic Services
@@ -1051,48 +1044,89 @@
             return (
                 <div className="space-y-6">
                     <style>{`
-                    @media print {
-                        @page { size: landscape; margin: 3mm; }
-                        body { visibility: hidden; background: white !important; }
-                        
-                        /* Layout reset for printing */
-                        :root, body, #root, #root > div, main {
-                            height: auto !important;
-                            width: 100% !important;
-                            overflow: visible !important;
-                            display: block !important;
-                            margin: 0 !important;
-                            padding: 0 !important;
-                        }
+                        @media print {
+                            @page { size: landscape; margin: 3mm; }
+                            body { visibility: hidden; background: white !important; }
+                            
+                            /* Layout reset for printing */
+                            :root, body, #root, #root > div, main {
+                                height: auto !important;
+                                width: 100% !important;
+                                overflow: visible !important;
+                                display: block !important;
+                                margin: 0 !important;
+                                padding: 0 !important;
+                            }
 
-                        button, nav, header, .sidebar, .no-print { display: none !important; }
-                        body > *:not(#root) { display: none !important; }
+                            button, nav, header, .sidebar, .no-print { display: none !important; }
+                            body > *:not(#root) { display: none !important; }
 
-                        .shift-table-container { 
-                            visibility: visible !important; 
-                            position: fixed !important; 
-                            top: 0 !important; 
-                            left: 0 !important; 
-                            width: 100vw !important; 
-                            min-height: 100vh !important; 
-                            background: white !important; 
-                            z-index: 2147483647 !important; 
-                            margin: 0 !important; 
-                            padding: 5mm !important; 
-                            display: block !important; 
-                            overflow: visible !important; 
-                            zoom: var(--print-scale, 1); 
+                            /* 印刷用コンテナの強制サイズ指定（iPhone対策） */
+                            .shift-table-container { 
+                                visibility: visible !important; 
+                                position: fixed !important; 
+                                top: 0 !important; 
+                                left: 0 !important; 
+                                
+                                /* 幅をA4横相当に強制固定 */
+                                width: 1122px !important; 
+                                min-width: 1122px !important; 
+                                
+                                background: white !important; 
+                                z-index: 2147483647 !important; 
+                                margin: 0 !important; 
+                                padding: 5mm !important; 
+                                display: block !important; 
+                                overflow: visible !important; 
+                                
+                                /* 縮小して用紙に収める */
+                                zoom: 0.9 !important; 
+                                transform-origin: top left !important;
+                            }
+
+                            .shift-table-container * { visibility: visible !important; }
+                            .print-only { display: block !important; }
+                            .print-table-row { display: table-row-group !important; }
+                            .screen-table-row { display: none !important; }
+                            
+                            .print-area { 
+                                width: 100% !important; 
+                                border-collapse: collapse; 
+                                table-layout: fixed; 
+                            }
+                            
+                            .print-area th, .print-area td { 
+                                border: 1px solid #444 !important; 
+                                text-align: center; 
+                                height: auto !important; 
+                                vertical-align: middle; 
+                                padding: 2px !important; 
+                                white-space: nowrap; 
+                                position: static !important; 
+                            }
+                            
+                            .print-area th { 
+                                background-color: #dbeafe !important; 
+                                color: #1e3a8a !important; 
+                                font-weight: 800 !important; 
+                                height: 30px !important; 
+                                font-size: 11px !important; 
+                                -webkit-print-color-adjust: exact !important; 
+                                print-color-adjust: exact !important; 
+                            }
+                            
+                            .print-header { 
+                                font-size: 18px; 
+                                font-weight: bold; 
+                                margin-bottom: 12px; 
+                                text-align: center; 
+                                padding-top: 10px; 
+                            }
+                            
+                            thead { display: table-header-group; } 
+                            tbody { display: table-row-group; } 
+                            tr { break-inside: avoid; page-break-inside: avoid; }
                         }
-                        .shift-table-container * { visibility: visible !important; }
-                        .print-only { display: block !important; }
-                        .print-table-row { display: table-row-group !important; }
-                        .screen-table-row { display: none !important; }
-                        .print-area { width: 100%; border-collapse: collapse; font-size: 10px; table-layout: fixed; }
-                        .print-area th, .print-area td { border: 1px solid #444 !important; text-align: center; height: auto !important; vertical-align: middle; padding: 2px !important; white-space: nowrap; position: static !important; }
-                        .print-area th { background-color: #dbeafe !important; color: #1e3a8a !important; font-weight: 800 !important; height: 30px !important; font-size: 11px !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-                        .print-header { font-size: 18px; font-weight: bold; margin-bottom: 12px; text-align: center; padding-top: 10px; }
-                        thead { display: table-header-group; } tbody { display: table-row-group; } tr { break-inside: avoid; page-break-inside: avoid; }
-                    }
                     `}</style>
 
                     {showOverwriteModal && (
@@ -1215,7 +1249,7 @@
                             <div className="overflow-x-auto">
                                 <table className="w-full text-xs text-center border-collapse print-area">
                                     <colgroup>
-                                        <col className="w-24" style={{ width: '15%' }} />
+                                        <col className="w-24 min-w-[40px]" style={{ width: '15%' }} />
                                         {timeSlots.map(t => (
                                             <col key={t} className="min-w-[40px]" style={{ width: `calc(85% / ${timeSlots.length})` }} />
                                         ))}
@@ -1290,29 +1324,6 @@
             );
         };
 
-        // ==========================================
-        // App.tsx
-        // ==========================================
-        const TABS = { SHIFT: 'shift', STAFF: 'staff', REGISTER: 'register', DATA: 'data' };
-
-        const generateDefaultRegisters = () => {
-            const regs = [];
-            for (let i = 1; i <= 20; i++) {
-                regs.push({ id: `reg-${i}`, name: `${i}号`, isActive: i <= 5, order: i, isBadgeRole: false });
-            }
-            regs.push({ id: 'reg-cart', name: 'カート回収', isActive: false, order: 21, isBadgeRole: true });
-            regs.push({ id: 'reg-kind', name: '親切係', isActive: false, order: 22, isBadgeRole: true });
-            regs.push({ id: 'reg-counter', name: 'カウンター', isActive: false, order: 23, isBadgeRole: true });
-            return regs;
-        };
-
-        const INITIAL_DATA = {
-            staff: [],
-            registers: generateDefaultRegisters(),
-            shifts: [],
-            settings: { openTime: DEFAULT_OPEN_TIME, closeTime: DEFAULT_CLOSE_TIME }
-        };
-
         const DataPanel = ({ onBackup, onRestore, onReset, onSaveHtml }) => (
             <div className="max-w-2xl mx-auto space-y-8">
                 <div className="bg-white p-6 rounded-lg shadow border border-blue-200">
@@ -1351,195 +1362,6 @@
                 <span>{label}</span>
             </button>
         );
-
-        function App() {
-            const [activeTab, setActiveTab] = useState(TABS.SHIFT);
-            const [data, setData] = useState(INITIAL_DATA);
-            const [isLoaded, setIsLoaded] = useState(false);
-            const [isPcMode, setIsPcMode] = useState(true); // Default to PC mode
-
-            useEffect(() => {
-                const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
-                if (saved) {
-                    try {
-                        const parsed = JSON.parse(saved);
-                        if (!parsed.settings) parsed.settings = { openTime: DEFAULT_OPEN_TIME, closeTime: DEFAULT_CLOSE_TIME };
-                        if (parsed.staff) parsed.staff = parsed.staff.map(s => ({ ...s, badges: s.badges || [] }));
-                        if (parsed.registers) parsed.registers = parsed.registers.map(r => ({ ...r, isBadgeRole: r.isBadgeRole !== undefined ? r.isBadgeRole : (!!r.requiredBadge || false), requiredBadge: undefined }));
-                        setData(parsed);
-                    } catch (e) { console.error("Failed to load data", e); }
-                }
-                setIsLoaded(true);
-            }, []);
-
-            useEffect(() => {
-                if (isLoaded) localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data));
-            }, [data, isLoaded]);
-
-            const handleBackup = () => {
-                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `regimaster_backup_${new Date().toISOString().split('T')[0]}.json`;
-                a.click();
-            };
-
-            const handleRestore = (e) => {
-                const file = e.target.files?.[0];
-                if (!file) return;
-                const reader = new FileReader();
-                reader.onload = (ev) => {
-                    try {
-                        const parsed = JSON.parse(ev.target?.result);
-                        if (parsed.staff && parsed.registers && parsed.shifts) {
-                            if (confirm('現在のデータを上書きして復元しますか？この操作は取り消せません。')) {
-                                if (!parsed.settings) parsed.settings = { openTime: DEFAULT_OPEN_TIME, closeTime: DEFAULT_CLOSE_TIME };
-                                parsed.staff = parsed.staff.map(s => ({ ...s, badges: s.badges || [] }));
-                                parsed.registers = parsed.registers.map(r => ({ ...r, isBadgeRole: r.isBadgeRole !== undefined ? r.isBadgeRole : false, requiredBadge: undefined }));
-                                setData(parsed);
-                                alert('復元が完了しました。');
-                            }
-                        } else { alert('無効なバックアップファイルです。'); }
-                    } catch (err) { alert('ファイルの読み込みに失敗しました。'); }
-                };
-                reader.readAsText(file);
-            };
-
-            const handleReset = () => {
-                if (confirm('すべてのデータを消去し、初期状態（レジ1〜20号など）に戻しますか？\nこの操作は元に戻せません。')) {
-                    setData(INITIAL_DATA);
-                    alert('初期化しました。');
-                }
-            };
-            
-            const handleSaveHTML = async (isSaveAs) => {
-                let html = document.documentElement.outerHTML;
-                html = html.replace(/<div id="root">.*?<\/div>/s, '<div id="root"></div>');
-                const dataString = JSON.stringify(data, null, 4);
-                const initialDataRegex = /const INITIAL_DATA = \{[\s\S]*?\};/;
-                html = html.replace(initialDataRegex, `const INITIAL_DATA = ${dataString};`);
-                const newStorageKey = `regi_master_pro_v2_saved_${Date.now()}`;
-                const storageKeyRegex = /const LOCAL_STORAGE_KEY = 'regi_master_pro_v2';/;
-                html = html.replace(storageKeyRegex, `const LOCAL_STORAGE_KEY = '${newStorageKey}';`);
-
-                if (isSaveAs) {
-                     const blob = new Blob([html], { type: 'text/html' });
-                     const url = URL.createObjectURL(blob);
-                     const a = document.createElement('a');
-                     a.href = url;
-                     a.download = `RegiMaster_${new Date().toISOString().slice(0,10)}.html`;
-                     a.click();
-                } else {
-                    if (window.showSaveFilePicker) {
-                        try {
-                            const handle = await window.showSaveFilePicker({
-                                suggestedName: 'index.html',
-                                types: [{ description: 'HTML File', accept: {'text/html': ['.html']} }],
-                            });
-                            const writable = await handle.createWritable();
-                            await writable.write(html);
-                            await writable.close();
-                            alert('保存しました。');
-                        } catch (err) {
-                            if (err.name !== 'AbortError') {
-                                console.error(err);
-                                alert('保存できませんでした。「名前をつけて保存」を試してください。');
-                            }
-                        }
-                    } else {
-                        alert('お使いのブラウザは直接の上書き保存に対応していません。「名前をつけて保存」としてダウンロードされます。元のファイルを置き換えてください。');
-                        const blob = new Blob([html], { type: 'text/html' });
-                        const url = URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.href = url;
-                        a.download = 'index.html';
-                        a.click();
-                    }
-                }
-            };
-
-            const availableBadges = data.registers.filter(r => r.isBadgeRole).map(r => r.name).sort();
-
-            if (!isLoaded) return <div className="flex h-screen items-center justify-center text-gray-500">Loading...</div>;
-
-            // PC Mode Layout (Sidebar)
-            if (isPcMode) {
-                return (
-                    <div className="flex h-screen bg-gray-50 text-gray-800 font-sans overflow-hidden">
-                        <aside className="w-64 bg-white border-r border-gray-200 flex flex-col justify-between sidebar no-print flex-shrink-0">
-                            <div>
-                                <div className="p-6">
-                                    <div className="flex items-center gap-2 mb-1">
-                                        <div className="bg-blue-600 text-white p-1.5 rounded-lg"><CalendarRange size={20} /></div>
-                                        <h1 className="text-lg font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 truncate">RegiMaster Pro</h1>
-                                    </div>
-                                    <p className="text-xs text-gray-400 pl-1">PC Optimized</p>
-                                </div>
-                                <nav className="px-4 space-y-2">
-                                    <SidebarItem active={activeTab === TABS.SHIFT} onClick={() => setActiveTab(TABS.SHIFT)} icon={<CalendarRange size={20} />} label="シフト作成" />
-                                    <SidebarItem active={activeTab === TABS.STAFF} onClick={() => setActiveTab(TABS.STAFF)} icon={<Users size={20} />} label="スタッフ管理" />
-                                    <SidebarItem active={activeTab === TABS.REGISTER} onClick={() => setActiveTab(TABS.REGISTER)} icon={<Monitor size={20} />} label="レジ設定" />
-                                    <SidebarItem active={activeTab === TABS.DATA} onClick={() => setActiveTab(TABS.DATA)} icon={<Database size={20} />} label="データ保存・読込" />
-                                </nav>
-                            </div>
-                            <div className="p-4 border-t border-gray-100">
-                                <button onClick={() => setIsPcMode(false)} className="flex items-center gap-2 text-sm text-gray-500 hover:text-blue-600 transition-colors w-full px-4 py-2 rounded hover:bg-gray-50">
-                                    <Smartphone size={16} />
-                                    <span>スマホビューへ切替</span>
-                                </button>
-                            </div>
-                        </aside>
-                        <main className="flex-1 overflow-y-auto p-8 w-full">
-                            <div className="max-w-full mx-auto">
-                                {activeTab === TABS.SHIFT && <ShiftView data={data} setData={setData} />}
-                                {activeTab === TABS.STAFF && <StaffView staffList={data.staff} setStaffList={(staff) => setData({ ...data, staff })} availableBadges={availableBadges} />}
-                                {activeTab === TABS.REGISTER && <RegisterView registers={data.registers} setRegisters={(registers) => setData({ ...data, registers })} />}
-                                {activeTab === TABS.DATA && <DataPanel onBackup={handleBackup} onRestore={handleRestore} onReset={handleReset} onSaveHtml={handleSaveHTML} />}
-                            </div>
-                        </main>
-                    </div>
-                );
-            }
-
-            // Mobile Mode Layout (Header)
-            return (
-                <div className="min-h-screen bg-gray-50 text-gray-800 font-sans">
-                    <header className="bg-white border-b border-gray-200 sticky top-0 z-50 no-print">
-                        <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
-                            <div className="flex justify-between items-center h-16">
-                                <div className="flex items-center gap-2">
-                                    <div className="bg-blue-600 text-white p-2 rounded-lg hidden sm:block"><CalendarRange size={24} /></div>
-                                    <h1 className="text-lg sm:text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 truncate">RegiMaster Pro</h1>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <nav className="flex space-x-1 sm:space-x-2">
-                                        <TabButton active={activeTab === TABS.SHIFT} onClick={() => setActiveTab(TABS.SHIFT)} icon={<CalendarRange size={20} />} label="シフト" />
-                                        <TabButton active={activeTab === TABS.STAFF} onClick={() => setActiveTab(TABS.STAFF)} icon={<Users size={20} />} label="スタッフ" />
-                                        <TabButton active={activeTab === TABS.REGISTER} onClick={() => setActiveTab(TABS.REGISTER)} icon={<Monitor size={20} />} label="レジ" />
-                                        <TabButton active={activeTab === TABS.DATA} onClick={() => setActiveTab(TABS.DATA)} icon={<Database size={20} />} label="データ" />
-                                    </nav>
-                                    <button onClick={() => setIsPcMode(true)} className="ml-2 p-2 text-gray-400 hover:text-blue-600 rounded-full hover:bg-gray-100 hidden sm:block" title="PCビューへ切替">
-                                        <Layout size={20} />
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </header>
-                    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                        <div className="sm:hidden mb-4 flex justify-end">
-                             <button onClick={() => setIsPcMode(true)} className="flex items-center gap-1 text-xs text-gray-500 bg-white border px-2 py-1 rounded shadow-sm">
-                                <Layout size={14} /> PCビュー
-                             </button>
-                        </div>
-                        {activeTab === TABS.SHIFT && <ShiftView data={data} setData={setData} />}
-                        {activeTab === TABS.STAFF && <StaffView staffList={data.staff} setStaffList={(staff) => setData({ ...data, staff })} availableBadges={availableBadges} />}
-                        {activeTab === TABS.REGISTER && <RegisterView registers={data.registers} setRegisters={(registers) => setData({ ...data, registers })} />}
-                        {activeTab === TABS.DATA && <DataPanel onBackup={handleBackup} onRestore={handleRestore} onReset={handleReset} onSaveHtml={handleSaveHTML} />}
-                    </main>
-                </div>
-            );
-        }
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
